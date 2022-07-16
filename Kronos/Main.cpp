@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <vector>
 
+#include "Engine/Dev/Log.h"
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
@@ -92,7 +94,7 @@ private:
 	{
 		if (enableValidationLayers && !checkValidationLayerSupport())
 		{
-			throw std::runtime_error("Validation layers requested are not available.");
+			Log::error("Validation layers requested are not available.");
 		}
 
 		// Application info
@@ -137,7 +139,7 @@ private:
 		// Create instance
 		if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create instance.");
+			Log::error("Failed to create instance.");
 		}
 	}
 
@@ -163,7 +165,7 @@ private:
 
 		if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to setup debug messenger.");
+			Log::error("Failed to setup debug messenger.");
 		}
 	}
 
@@ -234,9 +236,17 @@ private:
 
 int main()
 {
+	// Set flags for tracking CPU memory leaks
+	#ifdef _DEBUG
+		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	#endif // _DEBUG
+
+
+
 	HelloTriangleApplication app;
 
-	try {
+	try 
+	{
 		app.run();
 	}
 	catch (const std::exception & e)
