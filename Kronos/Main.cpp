@@ -18,6 +18,11 @@ const std::vector<const char*> validationLayers =
 	"VK_LAYER_KHRONOS_validation"
 };
 
+const std::vector<const char*> deviceExtensions =
+{
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
@@ -80,6 +85,13 @@ private:
 			return graphicsFamily.has_value() &&
 				presentFamily.has_value();
 		}
+	};
+
+	struct SwapChainSupportDetails
+	{
+		VkSurfaceCapabilitiesKHR capabilities;
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR> presentModes;
 	};
 
 	GLFWwindow* window;
@@ -251,11 +263,94 @@ private:
 		}
 	}
 
+	bool checkDeviceExtensionSupport(VkPhysicalDevice device)
+	{
+		// Get available extensions
+		uint32_t extensionCount;
+		vkEnumerateDeviceExtensionProperties(
+			device, nullptr, 
+			&extensionCount, nullptr
+		);
+		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+		vkEnumerateDeviceExtensionProperties(
+			device, nullptr,
+			&extensionCount, availableExtensions.data()
+		);
+
+		// Unique required extensions
+		std::set<std::string> requiredExtensions(
+			deviceExtensions.begin(), deviceExtensions.end()
+		);
+
+		// Remove found extensions
+		for (const auto& extension : availableExtensions)
+			requiredExtensions.erase(extension.extensionName);
+
+		// Have all required extensions been found and removed?
+		return requiredExtensions.empty();
+	}
+
 	bool isDeviceSuitable(VkPhysicalDevice device)
 	{
+		// Find queue families
 		QueueFamilyIndices indices = findQueueFamilies(device);
 
-		return indices.isComplete();
+		// Find required extension support
+		bool extensionsSupported = checkDeviceExtensionSupport(device);
+
+		// Swap chain with correct support
+		bool swapChainAdequate = false;
+		if (extensionsSupported)
+		{
+			SwapChainSupportDetails swapChainSupport = 
+				querySwapChainSupport(device);
+			swapChainAdequate = !swapChainSupport.formats.empty() &&
+				!swapChainSupport.presentModes.empty();
+		}
+
+		return indices.isComplete() && 
+			extensionsSupported && 
+			swapChainAdequate;
+	}
+
+	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device)
+	{
+		SwapChainSupportDetails details;
+
+		// Capabilities
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+			device, this->surface, &details.capabilities
+		);
+
+		// Formats
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(
+			device, this->surface, &formatCount, nullptr
+		);
+		if (formatCount != 0)
+		{
+			details.formats.resize(formatCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(
+				device, this->surface, &formatCount, details.formats.data()
+			);
+		}
+
+		// Presentation modes
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(
+			device, this->surface, 
+			&presentModeCount, nullptr
+		);
+		if (presentModeCount != 0)
+		{
+			details.presentModes.resize(presentModeCount);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(
+				device, this->surface, 
+				&presentModeCount, details.presentModes.data()
+			);
+		}
+
+		return details;
 	}
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
@@ -333,6 +428,7 @@ private:
 
 	void createLogicalDevice()
 	{
+		// ---------- Queue families to be used ----------
 		QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice);
 
 		// Unique queue families to be used
@@ -356,9 +452,13 @@ private:
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
 
+		// ---------- Device features ----------
+		
 		// Device features
 		VkPhysicalDeviceFeatures deviceFeatures{};
 
+		// ---------- Logical device ----------
+		
 		// Logical device create info
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -368,7 +468,8 @@ private:
 
 		createInfo.pEnabledFeatures = &deviceFeatures;
 
-		createInfo.enabledExtensionCount = 0;
+		createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 		// Not used in newer versions of vulkan
 		if (enableValidationLayers)
