@@ -72,10 +72,12 @@ private:
 	struct QueueFamilyIndices
 	{
 		std::optional<uint32_t> graphicsFamily;
+		std::optional<uint32_t> presentFamily;
 
 		bool isComplete()
 		{
-			return graphicsFamily.has_value();
+			return graphicsFamily.has_value() &&
+				presentFamily.has_value();
 		}
 	};
 
@@ -84,6 +86,8 @@ private:
 	VkInstance instance;
 
 	VkDebugUtilsMessengerEXT debugMessenger;
+
+	VkSurfaceKHR surface;
 
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice device;
@@ -104,6 +108,7 @@ private:
 	{
 		createInstance();
 		setupDebugMessenger();
+		createSurface();
 		pickPhysicalDevice();
 		createLogicalDevice();
 	}
@@ -229,6 +234,19 @@ private:
 		}
 
 		return true;
+	}
+
+	void createSurface()
+	{
+		if (glfwCreateWindowSurface(
+			this->instance, 
+			this->window, 
+			nullptr, 
+			&this->surface) != VK_SUCCESS)
+		{
+			Log::error("Failed to create window surface.");
+			return;
+		}
 	}
 
 	bool isDeviceSuitable(VkPhysicalDevice device)
@@ -367,6 +385,8 @@ private:
 
 		if (enableValidationLayers)
 			DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+
+		vkDestroySurfaceKHR(instance, surface, nullptr);
 
 		// Destroys both physical device and instance
 		vkDestroyInstance(instance, nullptr);
