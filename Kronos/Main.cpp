@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
+#include <optional>
 
 #include "Engine/Dev/Log.h"
 
@@ -68,11 +69,24 @@ public:
 		cleanup();
 	}
 private:
+	struct QueueFamilyIndices
+	{
+		std::optional<uint32_t> graphicsFamily;
+
+		bool isComplete()
+		{
+			return graphicsFamily.has_value();
+		}
+	};
+
 	GLFWwindow* window;
 
 	VkInstance instance;
 
 	VkDebugUtilsMessengerEXT debugMessenger;
+
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
 
 	void initWindow()
 	{
@@ -88,6 +102,7 @@ private:
 	{
 		createInstance();
 		setupDebugMessenger();
+		pickPhysicalDevice();
 	}
 
 	void createInstance()
@@ -211,6 +226,75 @@ private:
 		}
 
 		return true;
+	}
+
+	bool isDeviceSuitable(VkPhysicalDevice device)
+	{
+		QueueFamilyIndices indices = findQueueFamilies(device);
+
+		return indices.isComplete();
+	}
+
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
+	{
+		QueueFamilyIndices indices;
+
+		// Get queue family handles
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+		// Find indices
+		int i = 0;
+		for (const auto& queueFamily : queueFamilies)
+		{
+			// Graphics queue family
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				indices.graphicsFamily = i;
+
+			// Done
+			if (indices.isComplete())
+				break;
+
+			i++;
+		}
+
+		return indices;
+	}
+
+	void pickPhysicalDevice()
+	{
+		// Get device count
+		uint32_t deviceCount = 0;
+		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+		// No devices found
+		if (deviceCount == 0)
+		{
+			Log::error("Failed to find GPUs with Vulkan support.");
+			return;
+		}
+
+		// Get device handles
+		std::vector<VkPhysicalDevice> devices(deviceCount);
+		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+		// Pick the first best found device
+		for (const auto& device : devices)
+		{
+			if (isDeviceSuitable(device))
+			{
+				physicalDevice = device;
+				break;
+			}
+		}
+
+		if (physicalDevice == VK_NULL_HANDLE)
+		{
+			Log::error("Failed to find a suitable GPU.");
+			return;
+		}
 	}
 
 	void mainLoop()
