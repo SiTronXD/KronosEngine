@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <cstring>
 #include <cstdlib>
@@ -32,6 +33,27 @@ const std::vector<const char*> deviceExtensions =
 #else
 	const bool enableValidationLayers = true;
 #endif
+
+static std::vector<char> readFile(const std::string& filename)
+{
+	std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+	if (!file.is_open())
+	{
+		Log::error("Failed to open file.");
+	}
+
+	// Allocate buffer from read position at the end of the file
+	size_t fileSize = (size_t) file.tellg();
+	std::vector<char> buffer(fileSize);
+
+	// Read all of the file from the beginning
+	file.seekg(0);
+	file.read(buffer.data(), fileSize);
+
+	file.close();
+	return buffer;
+}
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -137,6 +159,7 @@ private:
 		createLogicalDevice();
 		createSwapChain();
 		createImageViews();
+		createGraphicsPipeline();
 	}
 
 	void createInstance()
@@ -682,6 +705,57 @@ private:
 				return;
 			}
 		}
+	}
+
+	VkShaderModule createShaderModule(const std::vector<char>& code)
+	{
+		VkShaderModuleCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		createInfo.codeSize = code.size();
+		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+		VkShaderModule shaderModule;
+		if (vkCreateShaderModule(this->device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+		{
+			Log::error("Failed to create shader module.");
+		}
+
+		return shaderModule;
+	}
+
+	void createGraphicsPipeline()
+	{
+		auto vertShaderCode = readFile("Resources/Shaders/vert.spv");
+		auto fragShaderCode = readFile("Resources/Shaders/frag.spv");
+
+		// Destroy after creating the pipeline
+		VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+		VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+		// Vertex shader stage create info
+		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+		vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertShaderStageInfo.module = vertShaderModule;
+		vertShaderStageInfo.pName = "main";
+		vertShaderStageInfo.pSpecializationInfo = nullptr; // For shader constants
+
+		// Fragment shader stage create info
+		VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+		fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragShaderStageInfo.module = fragShaderModule;
+		fragShaderStageInfo.pName = "main";
+		fragShaderStageInfo.pSpecializationInfo = nullptr; // For shader constants
+
+		VkPipelineShaderStageCreateInfo shaderStages[] =
+		{
+			vertShaderStageInfo,
+			fragShaderStageInfo
+		};
+
+		vkDestroyShaderModule(this->device, fragShaderModule, nullptr);
+		vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
 	}
 
 	void mainLoop()
