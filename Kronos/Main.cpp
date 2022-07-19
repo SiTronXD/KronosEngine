@@ -3,7 +3,9 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <cstring>
 #include <cstdlib>
+#include <cstdint>
 #include <vector>
 #include <optional>
 #include <set>
@@ -109,6 +111,11 @@ private:
 
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
+
+	VkSwapchainKHR swapChain;
+	std::vector<VkImage> swapChainImages;
+	VkFormat swapChainImageFormat;
+	VkExtent2D swapChainExtent;
 
 	void initWindow()
 	{
@@ -350,7 +357,7 @@ private:
 
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 	{
-		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+		if (capabilities.currentExtent.width != ~uint32_t(0))
 		{
 			return capabilities.currentExtent;
 		}
@@ -616,6 +623,29 @@ private:
 			createInfo.queueFamilyIndexCount = 0; // Optional
 			createInfo.pQueueFamilyIndices = nullptr; // Optional
 		}
+
+		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		createInfo.presentMode = presentMode;
+		createInfo.clipped = VK_TRUE;	// Clip pixels overlapped by other windows
+		createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+		// Create swapchain
+		if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr, &this->swapChain) != VK_SUCCESS)
+		{
+			Log::error("Failed to created swapchain.");
+			return;
+		}
+
+		// We've only specified the minimum number of images, so the implementation
+		// could create more.
+		vkGetSwapchainImagesKHR(this->device, this->swapChain, &imageCount, nullptr);
+		swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(this->device, this->swapChain, &imageCount, swapChainImages.data());
+
+		// Save format and extent
+		this->swapChainImageFormat = surfaceFormat.format;
+		this->swapChainExtent = extent;
 	}
 
 	void mainLoop()
@@ -628,7 +658,8 @@ private:
 
 	void cleanup()
 	{
-		vkDestroyDevice(device, nullptr);
+		vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
+		vkDestroyDevice(this->device, nullptr);
 
 		if (enableValidationLayers)
 			DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
@@ -638,8 +669,8 @@ private:
 		// Destroys both physical device and instance
 		vkDestroyInstance(instance, nullptr);
 
+		// GLFW
 		glfwDestroyWindow(window);
-
 		glfwTerminate();
 	}
 };
