@@ -137,6 +137,7 @@ private:
 	VkSwapchainKHR swapChain;
 	std::vector<VkImage> swapChainImages;
 	std::vector<VkImageView> swapChainImageViews;
+	std::vector<VkFramebuffer> swapChainFramebuffers;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 
@@ -165,6 +166,7 @@ private:
 		createImageViews();
 		createRenderPass();
 		createGraphicsPipeline();
+		createFramebuffers();
 	}
 
 	void createInstance()
@@ -945,6 +947,36 @@ private:
 		vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
 	}
 
+	void createFramebuffers()
+	{
+		// Create one framebuffer for each swapchain image view
+		this->swapChainFramebuffers.resize(this->swapChainImageViews.size());
+		for (size_t i = 0; i < this->swapChainImageViews.size(); ++i)
+		{
+			VkImageView attachments[] =
+			{
+				swapChainImageViews[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = renderPass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = swapChainExtent.width;
+			framebufferInfo.height = swapChainExtent.height;
+			framebufferInfo.layers = 1;
+			if (vkCreateFramebuffer(
+				this->device, 
+				&framebufferInfo, 
+				nullptr, 
+				&this->swapChainFramebuffers[i]) != VK_SUCCESS)
+			{
+				Log::error("Failed to create framebuffer.");
+			}
+		}
+	}
+
 	void mainLoop()
 	{
 		while (!glfwWindowShouldClose(window))
@@ -955,6 +987,11 @@ private:
 
 	void cleanup()
 	{
+		for (auto framebuffer : swapChainFramebuffers)
+		{
+			vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+		}
+
 		vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
 		vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
 		vkDestroyRenderPass(this->device, this->renderPass, nullptr);
