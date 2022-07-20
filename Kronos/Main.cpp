@@ -145,6 +145,9 @@ private:
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 
+	VkCommandPool commandPool;
+	VkCommandBuffer commandBuffer;
+
 	void initWindow()
 	{
 		glfwInit();
@@ -167,6 +170,8 @@ private:
 		createRenderPass();
 		createGraphicsPipeline();
 		createFramebuffers();
+		createCommandPool();
+		createCommandBuffer();
 	}
 
 	void createInstance()
@@ -816,7 +821,7 @@ private:
 		inputAssembly.primitiveRestartEnable = VK_FALSE;
 
 		// Viewport
-		VkViewport viewport{};
+		/*VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
 		viewport.width = (float) swapChainExtent.width;
@@ -827,7 +832,7 @@ private:
 		// Scissor
 		VkRect2D scissor{};
 		scissor.offset = { 0, 0 };
-		scissor.extent = swapChainExtent;
+		scissor.extent = swapChainExtent;*/
 
 		// Dynamic states (for dynamic viewport)
 		std::vector<VkDynamicState> dynamicStates =
@@ -977,6 +982,110 @@ private:
 		}
 	}
 
+	void createCommandPool()
+	{
+		QueueFamilyIndices queueFamilyIndices = 
+			findQueueFamilies(this->physicalDevice);
+
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+		if (vkCreateCommandPool(
+			this->device, 
+			&poolInfo, 
+			nullptr, 
+			&this->commandPool) != VK_SUCCESS)
+		{
+			Log::error("Failed to create command pool.");
+		}
+	}
+
+	void createCommandBuffer()
+	{
+		// Allocate command buffer from command pool
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = commandPool;
+		allocInfo.commandBufferCount = 1;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		if (vkAllocateCommandBuffers(
+			this->device, 
+			&allocInfo, 
+			&this->commandBuffer) != VK_SUCCESS)
+		{
+			Log::error("Failed to allocate command buffers.");
+		}
+	}
+
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+	{
+		// Reset and begin recording into command buffer
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = 0;
+		beginInfo.pInheritanceInfo = nullptr;
+		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+		{
+			Log::error("Failed to begin recording command buffer.");
+		}
+
+		// Begin render pass
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = this->renderPass;
+		renderPassInfo.framebuffer = this->swapChainFramebuffers[imageIndex];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = this->swapChainExtent;
+
+		// Clear value
+		VkClearValue clearColor = {{{ 0.0f, 0.0f, 0.0f, 1.0f }}};
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
+
+		// Record beginning render pass
+		vkCmdBeginRenderPass(
+			commandBuffer, 
+			&renderPassInfo, 
+			VK_SUBPASS_CONTENTS_INLINE
+		);
+
+		// Record binding graphics pipeline
+		vkCmdBindPipeline(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			this->graphicsPipeline
+		);
+
+		// Record dynamic viewport
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = static_cast<float>(swapChainExtent.width);
+		viewport.height = static_cast<float>(swapChainExtent.height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+		// Record dynamic scissor
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = this->swapChainExtent;
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+		// Record draw!
+		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+		// Record ending render pass
+		vkCmdEndRenderPass(commandBuffer);
+
+		// Finish recording
+		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+		{
+			Log::error("Failed to record command buffer.");
+		}
+	}
+
 	void mainLoop()
 	{
 		while (!glfwWindowShouldClose(window))
@@ -987,6 +1096,9 @@ private:
 
 	void cleanup()
 	{
+		// Destroys command pool and command buffers allocated from it
+		vkDestroyCommandPool(this->device, this->commandPool, nullptr);
+
 		for (auto framebuffer : swapChainFramebuffers)
 		{
 			vkDestroyFramebuffer(this->device, framebuffer, nullptr);
