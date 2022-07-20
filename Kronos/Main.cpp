@@ -142,6 +142,7 @@ private:
 
 	VkRenderPass renderPass;
 	VkPipelineLayout pipelineLayout;
+	VkPipeline graphicsPipeline;
 
 	void initWindow()
 	{
@@ -895,7 +896,7 @@ private:
 		colorBlending.blendConstants[2] = 0.0f;
 		colorBlending.blendConstants[3] = 0.0f;
 
-		// Pipeline layout
+		// Pipeline layout (uniforms and push values)
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 0;
@@ -909,6 +910,35 @@ private:
 			&this->pipelineLayout) != VK_SUCCESS)
 		{
 			Log::error("Failed to create pipeline layout!");
+		}
+
+		// Graphics pipeline
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineInfo.stageCount = 2;
+		pipelineInfo.pStages = shaderStages;
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssembly;
+		pipelineInfo.pViewportState = &viewportState;
+		pipelineInfo.pRasterizationState = &rasterizer;
+		pipelineInfo.pMultisampleState = &multisampling;
+		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pColorBlendState = &colorBlending;
+		pipelineInfo.pDynamicState = &dynamicState;
+		pipelineInfo.layout = pipelineLayout;
+		pipelineInfo.renderPass = renderPass;
+		pipelineInfo.subpass = 0;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
+		if (vkCreateGraphicsPipelines(
+			this->device, 
+			VK_NULL_HANDLE, 
+			1, 
+			&pipelineInfo, 
+			nullptr, 
+			&this->graphicsPipeline) != VK_SUCCESS)
+		{
+			Log::error("Failed to create graphics pipeline.");
 		}
 
 		vkDestroyShaderModule(this->device, fragShaderModule, nullptr);
@@ -925,6 +955,7 @@ private:
 
 	void cleanup()
 	{
+		vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
 		vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
 		vkDestroyRenderPass(this->device, this->renderPass, nullptr);
 
