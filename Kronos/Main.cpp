@@ -148,6 +148,10 @@ private:
 	VkCommandPool commandPool;
 	VkCommandBuffer commandBuffer;
 
+	VkSemaphore imageAvailableSemaphore;
+	VkSemaphore renderFinishedSemaphore;
+	VkFence inFlightFence;
+
 	void initWindow()
 	{
 		glfwInit();
@@ -172,6 +176,7 @@ private:
 		createFramebuffers();
 		createCommandPool();
 		createCommandBuffer();
+		createSyncObjects();
 	}
 
 	void createInstance()
@@ -758,6 +763,15 @@ private:
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
 
+		// Subpass dependency
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 		// Render pass
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -765,6 +779,8 @@ private:
 		renderPassInfo.pAttachments = &colorAttachment;
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
+		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.pDependencies = &dependency;
 		if (vkCreateRenderPass(
 			this->device, 
 			&renderPassInfo, 
@@ -1086,16 +1102,121 @@ private:
 		}
 	}
 
+	void createSyncObjects()
+	{
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		if (
+			vkCreateSemaphore(
+				this->device, 
+				&semaphoreInfo, 
+				nullptr, 
+				&this->imageAvailableSemaphore) != VK_SUCCESS ||
+			vkCreateSemaphore(
+				this->device,
+				&semaphoreInfo,
+				nullptr,
+				&this->renderFinishedSemaphore) != VK_SUCCESS ||
+			vkCreateFence(
+				this->device,
+				&fenceInfo,
+				nullptr,
+				&this->inFlightFence
+			) != VK_SUCCESS)
+		{
+			Log::error("Failed to create semaphores/fences.");
+		}
+	}
+
 	void mainLoop()
 	{
-		while (!glfwWindowShouldClose(window))
+		while (!glfwWindowShouldClose(this->window))
 		{
 			glfwPollEvents();
+			drawFrame();
 		}
+
+		// Wait for device before cleanup
+		vkDeviceWaitIdle(this->device);
+	}
+
+	void drawFrame()
+	{
+		// Wait, then reset fence
+		vkWaitForFences(this->device, 1, &this->inFlightFence, VK_TRUE, UINT64_MAX);
+		vkResetFences(this->device, 1, &this->inFlightFence);
+
+		// Get next image index from the swapchain
+		uint32_t imageIndex;
+		vkAcquireNextImageKHR(
+			this->device, 
+			this->swapChain, 
+			UINT64_MAX, 
+			this->imageAvailableSemaphore, 
+			VK_NULL_HANDLE, 
+			&imageIndex
+		);
+
+		// Reset command buffer
+		vkResetCommandBuffer(this->commandBuffer, 0);
+
+		// Record command buffer
+		this->recordCommandBuffer(this->commandBuffer, imageIndex);
+
+		// Info for submitting command buffer
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		
+		VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphore };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &this->commandBuffer;
+
+		VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		// Submit command buffer
+		if (vkQueueSubmit(
+			this->graphicsQueue, 
+			1, 
+			&submitInfo, 
+			this->inFlightFence)
+			!= VK_SUCCESS)
+		{
+			Log::error("Failed to submit draw command buffer.");
+		}
+
+		// Present info
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+
+		VkSwapchainKHR swapChains[] = { this->swapChain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &imageIndex;
+		presentInfo.pResults = nullptr;
+
+		// Present!
+		vkQueuePresentKHR(this->presentQueue, &presentInfo);
 	}
 
 	void cleanup()
 	{
+		vkDestroySemaphore(this->device, this->imageAvailableSemaphore, nullptr);
+		vkDestroySemaphore(this->device, this->renderFinishedSemaphore, nullptr);
+		vkDestroyFence(this->device, this->inFlightFence, nullptr);
+
 		// Destroys command pool and command buffers allocated from it
 		vkDestroyCommandPool(this->device, this->commandPool, nullptr);
 
