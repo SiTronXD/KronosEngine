@@ -1,6 +1,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -12,12 +14,58 @@
 #include <set>
 #include <algorithm>
 #include <limits>
+#include <array>
 
 #include "Engine/Dev/Log.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
+struct Vertex
+{
+	glm::vec2 pos;
+	glm::vec3 color;
+
+	// Describes data load rate throughout vertices
+	static VkVertexInputBindingDescription getBindingDescription()
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(Vertex);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	// Describes how to extract vertex attribute from vertex data in 
+	// binding description
+	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+	{
+		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+		
+		// Position
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+		// Color
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+		return attributeDescriptions;
+	}
+};
+
+const std::vector<Vertex> vertices =
+{
+	{{  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }},
+	{{  0.5f,  0.5f }, { 0.0f, 1.0f, 0.0f }},
+	{{ -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }}
+};
 
 const std::vector<const char*> validationLayers =
 {
@@ -153,6 +201,9 @@ private:
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
 
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
+
 	bool framebufferResized = false;
 
 	uint32_t currentFrame = 0;
@@ -189,6 +240,7 @@ private:
 		createGraphicsPipeline();
 		createFramebuffers();
 		createCommandPool();
+		createVertexBuffer();
 		createCommandBuffers();
 		createSyncObjects();
 	}
@@ -868,12 +920,15 @@ private:
 		};
 
 		// Vertex input
+		auto bindingDescription = Vertex::getBindingDescription();
+		auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.pVertexBindingDescriptions = nullptr;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+		vertexInputInfo.vertexBindingDescriptionCount = 1;
+		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 		// Input assembly
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -1062,6 +1117,97 @@ private:
 		}
 	}
 
+	uint32_t findMemoryType(
+		uint32_t typeFilter, 
+		VkMemoryPropertyFlags properties)
+	{
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(this->physicalDevice, &memProperties);
+
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
+		{
+			if (typeFilter & (1 << i) && 
+				(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+			{
+				return i;
+			}
+		}
+
+		Log::error("Failed to find suitable memory type.");
+		return uint32_t(~0);
+	}
+
+	void createVertexBuffer()
+	{
+		// Create buffer
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(
+			this->device, 
+			&bufferInfo, 
+			nullptr, 
+			&this->vertexBuffer) != VK_SUCCESS)
+		{
+			Log::error("Failed to create vertex buffer.");
+		}
+
+		// Get memory requirements from buffer
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(
+			this->device, 
+			this->vertexBuffer, 
+			&memRequirements
+		);
+
+		// Allocate memory for buffer
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(
+			memRequirements.memoryTypeBits,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		);
+		if (vkAllocateMemory(
+			this->device, 
+			&allocInfo, 
+			nullptr, 
+			&this->vertexBufferMemory) != VK_SUCCESS)
+		{
+			Log::error("Failed to allocate vertex buffer memory.");
+		}
+
+		// Bind memory to buffer
+		vkBindBufferMemory(
+			this->device, 
+			this->vertexBuffer, 
+			this->vertexBufferMemory, 
+			0
+		);
+
+		// Fill buffer memory with data
+
+		// Map buffer memory into CPU accessible memory
+		void* data;
+		vkMapMemory(
+			this->device, 
+			this->vertexBufferMemory, 
+			0, 
+			bufferInfo.size, 
+			0, 
+			&data
+		);
+
+		// Copy data to memory
+		memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+
+		// Unmap buffer memory
+		vkUnmapMemory(this->device, this->vertexBufferMemory);
+	}
+
 	void createCommandBuffers()
 	{
 		this->commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1136,8 +1282,13 @@ private:
 		scissor.extent = this->swapChainExtent;
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+		// Record binding vertex buffer
+		VkBuffer vertexBuffers[] = { this->vertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
 		// Record draw!
-		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+		vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		// Record ending render pass
 		vkCmdEndRenderPass(commandBuffer);
@@ -1296,6 +1447,9 @@ private:
 	void cleanup()
 	{
 		this->cleanupSwapChain();
+
+		vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
+		vkFreeMemory(this->device, this->vertexBufferMemory, nullptr);
 
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 		{
