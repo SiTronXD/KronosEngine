@@ -153,6 +153,8 @@ private:
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
 
+	bool framebufferResized = false;
+
 	uint32_t currentFrame = 0;
 
 	void initWindow()
@@ -160,9 +162,18 @@ private:
 		glfwInit();
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 		window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+		glfwSetWindowUserPointer(this->window, this);
+		glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
+	}
+
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
+	{
+		auto app = reinterpret_cast<HelloTriangleApplication*>(
+			glfwGetWindowUserPointer(window)
+		);
+		app->framebufferResized = true;
 	}
 
 	void initVulkan()
@@ -693,6 +704,37 @@ private:
 		this->swapChainExtent = extent;
 	}
 
+	void cleanupSwapChain()
+	{
+		for (auto framebuffer : swapChainFramebuffers)
+			vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+
+		for (auto imageView : swapChainImageViews)
+			vkDestroyImageView(this->device, imageView, nullptr);
+
+		vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
+	}
+
+	void recreateSwapChain()
+	{
+		// Handle minimization when width/height is 0
+		int width = 0, height = 0;
+		glfwGetFramebufferSize(this->window, &width, &height);
+		while (width == 0 || height == 0)
+		{
+			glfwGetFramebufferSize(this->window, &width, &height);
+			glfwWaitEvents();
+		}
+
+		vkDeviceWaitIdle(this->device);
+
+		this->cleanupSwapChain();
+
+		this->createSwapChain();
+		this->createImageViews();
+		this->createFramebuffers();
+	}
+
 	void createImageViews()
 	{
 		// Create an image view for each swapchain image
@@ -1160,11 +1202,10 @@ private:
 	{
 		// Wait, then reset fence
 		vkWaitForFences(this->device, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
-		vkResetFences(this->device, 1, &this->inFlightFences[this->currentFrame]);
 
 		// Get next image index from the swapchain
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(
+		VkResult result = vkAcquireNextImageKHR(
 			this->device, 
 			this->swapChain, 
 			UINT64_MAX, 
@@ -1172,6 +1213,20 @@ private:
 			VK_NULL_HANDLE, 
 			&imageIndex
 		);
+
+		// Window resize?
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			this->recreateSwapChain();
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+		{
+			Log::error("Failed to acquire swapchain image.");
+		}
+
+		// Only reset the fence if we are submitting work
+		vkResetFences(this->device, 1, &this->inFlightFences[this->currentFrame]);
 
 		// Reset command buffer
 		vkResetCommandBuffer(this->commandBuffers[this->currentFrame], 0);
@@ -1219,13 +1274,29 @@ private:
 		presentInfo.pResults = nullptr;
 
 		// Present!
-		vkQueuePresentKHR(this->presentQueue, &presentInfo);
+		result = vkQueuePresentKHR(this->presentQueue, &presentInfo);
 
+		// Window resize?
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || 
+			result == VK_SUBOPTIMAL_KHR ||
+			this->framebufferResized)
+		{
+			this->framebufferResized = false;
+			this->recreateSwapChain();
+		}
+		else if (result != VK_SUCCESS)
+		{
+			Log::error("Failed to present swapchain image.");
+		}
+
+		// Next frame
 		this->currentFrame = (this->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 	}
 
 	void cleanup()
 	{
+		this->cleanupSwapChain();
+
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 		{
 			vkDestroySemaphore(this->device, this->imageAvailableSemaphores[i], nullptr);
@@ -1235,32 +1306,21 @@ private:
 
 		// Destroys command pool and command buffers allocated from it
 		vkDestroyCommandPool(this->device, this->commandPool, nullptr);
-
-		for (auto framebuffer : swapChainFramebuffers)
-		{
-			vkDestroyFramebuffer(this->device, framebuffer, nullptr);
-		}
-
 		vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
 		vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
 		vkDestroyRenderPass(this->device, this->renderPass, nullptr);
-
-		for (auto imageView : swapChainImageViews)
-			vkDestroyImageView(this->device, imageView, nullptr);
-
-		vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
 		vkDestroyDevice(this->device, nullptr);
 
 		if (enableValidationLayers)
-			DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+			DestroyDebugUtilsMessengerEXT(this->instance, debugMessenger, nullptr);
 
-		vkDestroySurfaceKHR(instance, surface, nullptr);
+		vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
 
 		// Destroys both physical device and instance
-		vkDestroyInstance(instance, nullptr);
+		vkDestroyInstance(this->instance, nullptr);
 
 		// GLFW
-		glfwDestroyWindow(window);
+		glfwDestroyWindow(this->window);
 		glfwTerminate();
 	}
 };
