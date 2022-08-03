@@ -8,19 +8,11 @@ int main()
 		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	#endif // _DEBUG
 
-	Engine engine;
-	engine.run();
-
-	/*HelloTriangleApplication app;
-	try 
+	// Create engine within it's own scope
 	{
-		//app.run();
+		Engine engine;
+		engine.init();
 	}
-	catch (const std::exception & e)
-	{
-		std::cerr << e.what() << std::endl;
-		return EXIT_FAILURE;
-	}*/
 
 	getchar();
 

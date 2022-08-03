@@ -1,8 +1,5 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -11,6 +8,8 @@
 #include <vector>
 #include <optional>
 #include <array>
+
+#include "../Application/Window.h"
 
 struct UniformBufferObject
 {
@@ -86,8 +85,6 @@ struct SwapChainSupportDetails
 class Renderer
 {
 private:
-	GLFWwindow* window;
-
 	VkInstance instance;
 
 	VkDebugUtilsMessengerEXT debugMessenger;
@@ -141,10 +138,9 @@ private:
 
 	uint32_t currentFrame = 0;
 
-	void initWindow();
+	Window* window;
+
 	void initVulkan();
-	void mainLoop();
-	void cleanup();
 
 	void createInstance();
 	void setupDebugMessenger();
@@ -170,7 +166,6 @@ private:
 	void createCommandBuffers();
 	void createSyncObjects();
 
-	void drawFrame();
 	void updateUniformBuffer(uint32_t currentImage);
 
 	void cleanupSwapChain();
@@ -240,5 +235,9 @@ public:
 	Renderer();
 	~Renderer();
 
-	void run();
+	void init();
+	void setWindow(Window& window);
+	void cleanup();
+
+	void drawFrame();
 };

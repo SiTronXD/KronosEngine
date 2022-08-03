@@ -75,14 +75,6 @@ static std::vector<char> readFile(const std::string& filename)
 	return buffer;
 }
 
-static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
-{
-	auto app = reinterpret_cast<Renderer*>(
-		glfwGetWindowUserPointer(window)
-		);
-	app->framebufferResized = true;
-}
-
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -118,17 +110,6 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
 	}
 }
 
-void Renderer::initWindow()
-{
-	glfwInit();
-
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
-	glfwSetWindowUserPointer(this->window, this);
-	glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
-}
-
 void Renderer::initVulkan()
 {
 	this->createInstance();
@@ -156,20 +137,11 @@ void Renderer::initVulkan()
 	this->createSyncObjects();
 }
 
-void Renderer::mainLoop()
-{
-	while (!glfwWindowShouldClose(this->window))
-	{
-		glfwPollEvents();
-		drawFrame();
-	}
-
-	// Wait for device before cleanup
-	vkDeviceWaitIdle(this->device);
-}
-
 void Renderer::cleanup()
 {
+	// Wait for device before cleanup
+	vkDeviceWaitIdle(this->device);
+
 	this->cleanupSwapChain();
 
 	// Texture
@@ -215,10 +187,6 @@ void Renderer::cleanup()
 
 	// Destroys both physical device and instance
 	vkDestroyInstance(this->instance, nullptr);
-
-	// GLFW
-	glfwDestroyWindow(this->window);
-	glfwTerminate();
 }
 
 void Renderer::createInstance()
@@ -291,7 +259,7 @@ void Renderer::createSurface()
 {
 	if (glfwCreateWindowSurface(
 		this->instance,
-		this->window,
+		this->window->getWindowHandle(),
 		nullptr,
 		&this->surface) != VK_SUCCESS)
 	{
@@ -1420,10 +1388,10 @@ void Renderer::recreateSwapChain()
 {
 	// Handle minimization when width/height is 0
 	int width = 0, height = 0;
-	glfwGetFramebufferSize(this->window, &width, &height);
+	glfwGetFramebufferSize(this->window->getWindowHandle(), &width, &height);
 	while (width == 0 || height == 0)
 	{
-		glfwGetFramebufferSize(this->window, &width, &height);
+		glfwGetFramebufferSize(this->window->getWindowHandle(), &width, &height);
 		glfwWaitEvents();
 	}
 
@@ -1489,7 +1457,7 @@ VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabiliti
 	else
 	{
 		int width, height;
-		glfwGetFramebufferSize(this->window, &width, &height);
+		glfwGetFramebufferSize(this->window->getWindowHandle(), &width, &height);
 
 		VkExtent2D actualExtent =
 		{
@@ -2159,6 +2127,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 }
 
 Renderer::Renderer()
+	: window(nullptr)
 {
 }
 
@@ -2166,10 +2135,12 @@ Renderer::~Renderer()
 {
 }
 
-void Renderer::run()
+void Renderer::init()
 {
-	this->initWindow();
 	this->initVulkan();
-	this->mainLoop();
-	this->cleanup();
+}
+
+void Renderer::setWindow(Window& window)
+{
+	this->window = &window;
 }
