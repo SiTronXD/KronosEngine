@@ -2,9 +2,6 @@
 
 #include "../Dev/Log.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -125,9 +122,9 @@ void Renderer::initVulkan()
 	this->createCommandPool();
 	this->createDepthResources();
 	this->createFramebuffers();
-	this->createTextureImage();
-	this->createTextureImageView();
-	this->createTextureSampler();
+
+	this->texture.createFromFile("Resources/Textures/poggers.PNG");
+
 	this->createVertexBuffer();
 	this->createIndexBuffer();
 	this->createUniformBuffers();
@@ -144,11 +141,7 @@ void Renderer::cleanup()
 
 	this->cleanupSwapChain();
 
-	// Texture
-	vkDestroySampler(this->device, this->textureSampler, nullptr);
-	vkDestroyImageView(this->device, this->textureImageView, nullptr);
-	vkDestroyImage(this->device, this->textureImage, nullptr);
-	vkFreeMemory(this->device, this->textureImageMemory, nullptr);
+	this->texture.cleanup();
 
 	// Destroys descriptor sets allocated from it
 	vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
@@ -853,127 +846,6 @@ void Renderer::createFramebuffers()
 	}
 }
 
-void Renderer::createTextureImage()
-{
-	// Load image
-	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load(
-		"Resources/Textures/poggers.PNG",
-		&texWidth,
-		&texHeight,
-		&texChannels,
-		STBI_rgb_alpha
-	);
-	VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-	if (!pixels)
-	{
-		Log::error("Failed to load texture image.");
-	}
-
-	// Staging buffer
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	this->createBuffer(
-		imageSize,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory
-	);
-
-	// Copy data to staging buffer
-	void* data;
-	vkMapMemory(this->device, stagingBufferMemory, 0, imageSize, 0, &data);
-	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	vkUnmapMemory(this->device, stagingBufferMemory);
-
-	// Free pixel array
-	stbi_image_free(pixels);
-
-	// Create image
-	this->createImage(
-		texWidth,
-		texHeight,
-		VK_FORMAT_R8G8B8A8_SRGB,
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		this->textureImage,
-		this->textureImageMemory
-	);
-
-	// TODO: transition and copy could be setup inside a single
-	// command buffer to increase throughput
-
-	// Transition layout to transfer dst
-	this->transitionImageLayout(
-		this->textureImage,
-		VK_FORMAT_R8G8B8A8_SRGB,
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-	);
-
-	// Copy from buffer to image
-	this->copyBufferToImage(
-		stagingBuffer,
-		this->textureImage,
-		static_cast<uint32_t>(texWidth),
-		static_cast<uint32_t>(texHeight)
-	);
-
-	// Transition layout to shader read
-	this->transitionImageLayout(
-		this->textureImage,
-		VK_FORMAT_R8G8B8A8_SRGB,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	);
-
-	// Deallocate staging buffer
-	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
-	vkFreeMemory(this->device, stagingBufferMemory, nullptr);
-}
-
-void Renderer::createTextureImageView()
-{
-	this->textureImageView = this->createImageView(
-		this->textureImage,
-		VK_FORMAT_R8G8B8A8_SRGB,
-		VK_IMAGE_ASPECT_COLOR_BIT
-	);
-}
-
-void Renderer::createTextureSampler()
-{
-	// Get physical device properties
-	VkPhysicalDeviceProperties properties{};
-	vkGetPhysicalDeviceProperties(this->physicalDevice, &properties);
-
-	// Sampler create info
-	VkSamplerCreateInfo samplerInfo{};
-	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	samplerInfo.magFilter = VK_FILTER_LINEAR;
-	samplerInfo.minFilter = VK_FILTER_LINEAR;
-	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.anisotropyEnable = VK_TRUE;
-	samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	samplerInfo.unnormalizedCoordinates = VK_FALSE;
-	samplerInfo.compareEnable = VK_FALSE;
-	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	samplerInfo.mipLodBias = 0.0f;
-	samplerInfo.minLod = 0.0f;
-	samplerInfo.maxLod = 0.0f;
-
-	// Create sampler
-	if (vkCreateSampler(this->device, &samplerInfo, nullptr, &this->textureSampler) != VK_SUCCESS)
-		Log::error("Failed to create texture sampler.");
-}
-
 void Renderer::createVertexBuffer()
 {
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
@@ -1139,8 +1011,8 @@ void Renderer::createDescriptorSets()
 		// Descriptor image info
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = this->textureImageView;
-		imageInfo.sampler = this->textureSampler;
+		imageInfo.imageView = this->texture.getImageView();
+		imageInfo.sampler = this->texture.getSampler();
 
 		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
@@ -1808,35 +1680,6 @@ void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
 	this->endSingleTimeCommands(commandBuffer);
 }
 
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
-{
-	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands();
-
-	VkBufferImageCopy region{};
-	region.bufferOffset = 0;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = 0;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
-
-	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = { width, height, 1 };
-
-	vkCmdCopyBufferToImage(
-		commandBuffer,
-		buffer,
-		image,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1,
-		&region
-	);
-
-	this->endSingleTimeCommands(commandBuffer);
-}
-
 void Renderer::createImage(
 	uint32_t width, 
 	uint32_t height, 
@@ -2127,7 +1970,8 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 }
 
 Renderer::Renderer()
-	: window(nullptr)
+	: window(nullptr),
+	texture(*this)
 {
 }
 

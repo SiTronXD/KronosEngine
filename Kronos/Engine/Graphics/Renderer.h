@@ -10,6 +10,7 @@
 #include <array>
 
 #include "../Application/Window.h"
+#include "Texture.h"
 
 struct UniformBufferObject
 {
@@ -127,10 +128,7 @@ private:
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
-	VkImage textureImage;
-	VkDeviceMemory textureImageMemory;
-	VkImageView textureImageView;
-	VkSampler textureSampler;
+	Texture texture;
 
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
@@ -155,9 +153,6 @@ private:
 	void createCommandPool();
 	void createDepthResources();
 	void createFramebuffers();
-	void createTextureImage();
-	void createTextureImageView();
-	void createTextureSampler();
 	void createVertexBuffer();
 	void createIndexBuffer();
 	void createUniformBuffers();
@@ -204,9 +199,6 @@ private:
 		VkBuffer srcBuffer,
 		VkBuffer dstBuffer,
 		VkDeviceSize size);
-	void copyBufferToImage(
-		VkBuffer buffer, VkImage image,
-		uint32_t width, uint32_t height);
 	void createImage(
 		uint32_t width,
 		uint32_t height,
@@ -225,8 +217,6 @@ private:
 		VkFormat format,
 		VkImageLayout oldLayout,
 		VkImageLayout newLayout);
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 public:
@@ -240,4 +230,11 @@ public:
 	void cleanup();
 
 	void drawFrame();
+
+	// Vulkan
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+	inline VkPhysicalDevice& getPhysicalDevice() { return this->physicalDevice; }
+	inline VkDevice& getDevice() { return this->device; }
 };
