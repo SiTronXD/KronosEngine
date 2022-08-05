@@ -128,11 +128,8 @@ private:
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
+	Texture depthTexture;
 	Texture texture;
-
-	VkImage depthImage;
-	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;
 
 	uint32_t currentFrame = 0;
 
@@ -151,7 +148,6 @@ private:
 	void createDescriptorSetLayout();
 	void createGraphicsPipeline();
 	void createCommandPool();
-	void createDepthResources();
 	void createFramebuffers();
 	void createVertexBuffer();
 	void createIndexBuffer();
@@ -179,11 +175,6 @@ private:
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 	bool isDeviceSuitable(VkPhysicalDevice device);
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-	VkFormat findSupportedFormat(
-		const std::vector<VkFormat>& candidates,
-		VkImageTiling tiling,
-		VkFormatFeatureFlags features);
-	VkFormat findDepthFormat();
 	bool hasStencilComponent(VkFormat format);
 	uint32_t findMemoryType(
 		uint32_t typeFilter,
@@ -199,24 +190,10 @@ private:
 		VkBuffer srcBuffer,
 		VkBuffer dstBuffer,
 		VkDeviceSize size);
-	void createImage(
-		uint32_t width,
-		uint32_t height,
-		VkFormat format,
-		VkImageTiling tiling,
-		VkImageUsageFlags usage,
-		VkMemoryPropertyFlags properties,
-		VkImage& image,
-		VkDeviceMemory& imageMemory);
 	VkImageView createImageView(
 		VkImage image,
 		VkFormat format,
 		VkImageAspectFlags aspectFlags);
-	void transitionImageLayout(
-		VkImage image,
-		VkFormat format,
-		VkImageLayout oldLayout,
-		VkImageLayout newLayout);
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 public:

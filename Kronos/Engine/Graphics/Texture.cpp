@@ -321,8 +321,8 @@ bool Texture::createTextureImage(const std::string& filePath)
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		this->textureImage,
-		this->textureImageMemory
+		this->image,
+		this->imageMemory
 	);
 
 	// TODO: transition and copy could be setup inside a single
@@ -330,7 +330,7 @@ bool Texture::createTextureImage(const std::string& filePath)
 
 	// Transition layout to transfer dst
 	this->transitionImageLayout(
-		this->textureImage,
+		this->image,
 		VK_FORMAT_R8G8B8A8_SRGB,
 		VK_IMAGE_LAYOUT_UNDEFINED,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
@@ -339,14 +339,14 @@ bool Texture::createTextureImage(const std::string& filePath)
 	// Copy from buffer to image
 	this->copyBufferToImage(
 		stagingBuffer,
-		this->textureImage,
+		this->image,
 		static_cast<uint32_t>(texWidth),
 		static_cast<uint32_t>(texHeight)
 	);
 
 	// Transition layout to shader read
 	this->transitionImageLayout(
-		this->textureImage,
+		this->image,
 		VK_FORMAT_R8G8B8A8_SRGB,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
@@ -361,8 +361,8 @@ bool Texture::createTextureImage(const std::string& filePath)
 
 bool Texture::createTextureImageView()
 {
-	this->textureImageView = this->createImageView(
-		this->textureImage,
+	this->imageView = this->createImageView(
+		this->image,
 		VK_FORMAT_R8G8B8A8_SRGB,
 		VK_IMAGE_ASPECT_COLOR_BIT
 	);
@@ -400,7 +400,7 @@ bool Texture::createTextureSampler()
 		this->renderer.getDevice(), 
 		&samplerInfo, 
 		nullptr, 
-		&this->textureSampler) != VK_SUCCESS)
+		&this->sampler) != VK_SUCCESS)
 	{
 		Log::error("Failed to create texture sampler.");
 		return false;
@@ -410,10 +410,10 @@ bool Texture::createTextureSampler()
 }
 
 Texture::Texture(Renderer& renderer)
-	: textureImage(VK_NULL_HANDLE),
-	textureImageMemory(VK_NULL_HANDLE),
-	textureImageView(VK_NULL_HANDLE),
-	textureSampler(VK_NULL_HANDLE),
+	: image(VK_NULL_HANDLE),
+	imageMemory(VK_NULL_HANDLE),
+	imageView(VK_NULL_HANDLE),
+	sampler(VK_NULL_HANDLE),
 	renderer(renderer)
 {
 }
@@ -433,10 +433,91 @@ bool Texture::createFromFile(const std::string& filePath)
 		hasCreatedTextureSampler;
 }
 
+bool Texture::createAsDepthTexture(uint32_t width, uint32_t height)
+{
+	// Get depth format
+	VkFormat depthFormat = Texture::findDepthFormat(this->renderer.getPhysicalDevice());
+
+	// Create depth image
+	this->createImage(
+		width,
+		height,
+		depthFormat,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		this->image,
+		this->imageMemory
+	);
+
+	// Create depth image view
+	this->imageView = this->createImageView(
+		this->image,
+		depthFormat,
+		VK_IMAGE_ASPECT_DEPTH_BIT
+	);
+
+	// Explicitly transition image layout, although it is not needed
+	// outside of a render pass
+	this->transitionImageLayout(
+		this->image,
+		depthFormat,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+	);
+
+	return true;
+}
+
 void Texture::cleanup()
 {
-	vkDestroySampler(this->renderer.getDevice(), this->textureSampler, nullptr);
-	vkDestroyImageView(this->renderer.getDevice(), this->textureImageView, nullptr);
-	vkDestroyImage(this->renderer.getDevice(), this->textureImage, nullptr);
-	vkFreeMemory(this->renderer.getDevice(), this->textureImageMemory, nullptr);
+	vkDestroySampler(this->renderer.getDevice(), this->sampler, nullptr);
+	vkDestroyImageView(this->renderer.getDevice(), this->imageView, nullptr);
+	vkFreeMemory(this->renderer.getDevice(), this->imageMemory, nullptr);
+	vkDestroyImage(this->renderer.getDevice(), this->image, nullptr);
+}
+
+VkFormat Texture::findSupportedFormat(
+	VkPhysicalDevice physicalDevice, 
+	const std::vector<VkFormat>& candidates, 
+	VkImageTiling tiling, 
+	VkFormatFeatureFlags features)
+{
+	// Loop through each format candidate
+	for (VkFormat format : candidates)
+	{
+		// Get format properties for candiodate
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(
+			physicalDevice,
+			format,
+			&props
+		);
+
+		// Check for linear tiling
+		if (tiling == VK_IMAGE_TILING_LINEAR &&
+			(props.linearTilingFeatures & features) == features)
+		{
+			return format;
+		}
+		// Check for optimal tiling
+		else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+			(props.optimalTilingFeatures & features) == features)
+		{
+			return format;
+		}
+	}
+
+	Log::error("Failed to find supported format.");
+	return candidates[0];
+}
+
+VkFormat Texture::findDepthFormat(VkPhysicalDevice physicalDevice)
+{
+	return Texture::findSupportedFormat(
+		physicalDevice,
+		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+	);
 }
