@@ -1,13 +1,25 @@
 #pragma once
 
+#include <vector>
+#include <array>
+
 #include "../Application/Window.h"
 
 class Renderer;
 
 class Buffer
 {
+private:
+	VkBuffer buffer;
+	VkDeviceMemory bufferMemory;
+
+	Renderer& renderer;
+
+protected:
+	inline Renderer& getRenderer() { return this->renderer; }
+
 public:
-	Buffer();
+	Buffer(Renderer& renderer);
 	virtual ~Buffer();
 
 	static uint32_t findMemoryType(
@@ -27,4 +39,9 @@ public:
 		VkBuffer srcBuffer,
 		VkBuffer dstBuffer,
 		VkDeviceSize size);
+
+	void cleanup();
+
+	inline VkBuffer& getBuffer() { return this->buffer; }
+	inline VkDeviceMemory& getBufferMemory() { return this->bufferMemory; }
 };

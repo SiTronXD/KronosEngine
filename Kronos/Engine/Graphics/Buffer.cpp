@@ -3,7 +3,10 @@
 #include "../Dev/Log.h"
 #include "Renderer.h"
 
-Buffer::Buffer()
+Buffer::Buffer(Renderer& renderer)
+	: renderer(renderer),
+	buffer(VK_NULL_HANDLE),
+	bufferMemory(VK_NULL_HANDLE)
 {
 }
 
@@ -105,4 +108,10 @@ void Buffer::copyBuffer(
 	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
 	renderer.endSingleTimeCommands(commandBuffer);
+}
+
+void Buffer::cleanup()
+{
+	vkDestroyBuffer(Buffer::getRenderer().getDevice(), this->buffer, nullptr);
+	vkFreeMemory(Buffer::getRenderer().getDevice(), this->bufferMemory, nullptr);
 }

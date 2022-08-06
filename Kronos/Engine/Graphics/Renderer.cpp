@@ -26,7 +26,7 @@ const std::vector<Vertex> vertices =
 	{{ -0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f}}
 };
 
-const std::vector<uint16_t> indices =
+const std::vector<uint32_t> indices =
 {
 	0, 1, 2,
 	2, 3, 0,
@@ -130,8 +130,9 @@ void Renderer::initVulkan()
 
 	this->texture.createFromFile("Resources/Textures/poggers.PNG");
 
-	this->createVertexBuffer();
-	this->createIndexBuffer();
+	this->vertexBuffer.createVertexBuffer(vertices);
+	this->indexBuffer.createIndexBuffer(indices);
+	
 	this->createUniformBuffers();
 	this->createDescriptorPool();
 	this->createDescriptorSets();
@@ -157,11 +158,8 @@ void Renderer::cleanup()
 		vkFreeMemory(this->device, this->uniformBuffersMemory[i], nullptr);
 	}
 
-	vkDestroyBuffer(this->device, this->indexBuffer, nullptr);
-	vkFreeMemory(this->device, this->indexBufferMemory, nullptr);
-
-	vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
-	vkFreeMemory(this->device, this->vertexBufferMemory, nullptr);
+	this->indexBuffer.cleanup();
+	this->vertexBuffer.cleanup();
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
@@ -816,103 +814,6 @@ void Renderer::createFramebuffers()
 			Log::error("Failed to create framebuffer.");
 		}
 	}
-}
-
-void Renderer::createVertexBuffer()
-{
-	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-	// Create staging buffer
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	Buffer::createBuffer(
-		this->physicalDevice,
-		this->device,
-		bufferSize,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory
-	);
-
-	// Fill buffer memory with data
-
-	// Map buffer memory into CPU accessible memory
-	void* data;
-	vkMapMemory(
-		this->device,
-		stagingBufferMemory,
-		0,
-		bufferSize,
-		0,
-		&data
-	);
-
-	// Copy data to memory
-	memcpy(data, vertices.data(), (size_t)bufferSize);
-
-	// Unmap buffer memory
-	vkUnmapMemory(this->device, stagingBufferMemory);
-
-	// Create vertex buffer
-	Buffer::createBuffer(
-		this->physicalDevice,
-		this->device,
-		bufferSize,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		this->vertexBuffer,
-		this->vertexBufferMemory
-	);
-
-	// Copy from staging buffer to real buffer
-	Buffer::copyBuffer(*this, stagingBuffer, this->vertexBuffer, bufferSize);
-
-	// Deallocate staging buffer
-	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
-	vkFreeMemory(this->device, stagingBufferMemory, nullptr);
-}
-
-void Renderer::createIndexBuffer()
-{
-	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-	// Create staging buffer
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	Buffer::createBuffer(
-		this->physicalDevice,
-		this->device,
-		bufferSize,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory
-	);
-
-	// Map memory
-	void* data;
-	vkMapMemory(this->device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, indices.data(), (size_t)bufferSize);
-	vkUnmapMemory(this->device, stagingBufferMemory);
-
-	// Create real buffer
-	Buffer::createBuffer(
-		this->physicalDevice,
-		this->device,
-		bufferSize,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		indexBuffer,
-		indexBufferMemory
-	);
-
-	// Copy from staging buffer to real buffer
-	Buffer::copyBuffer(*this, stagingBuffer, this->indexBuffer, bufferSize);
-
-	// Deallocate staging buffer
-	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
-	vkFreeMemory(this->device, stagingBufferMemory, nullptr);
 }
 
 void Renderer::createUniformBuffers()
@@ -1630,10 +1531,10 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 	// Record binding vertex/index buffer
-	VkBuffer vertexBuffers[] = { this->vertexBuffer };
+	VkBuffer vertexBuffers[] = { this->vertexBuffer.getBuffer() };
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-	vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+	vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
 	// Record binding descriptor sets
 	vkCmdBindDescriptorSets(
@@ -1664,6 +1565,9 @@ Renderer::Renderer()
 	: window(nullptr),
 	depthTexture(*this),
 	texture(*this),
+
+	vertexBuffer(*this),
+	indexBuffer(*this),
 
 	commandPool(VK_NULL_HANDLE),
 	debugMessenger(VK_NULL_HANDLE)
