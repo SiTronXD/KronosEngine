@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Graphics\Buffer.cpp" />
     <ClCompile Include="Engine\Engine.cpp" />
     <ClCompile Include="Engine\Dev\Log.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -88,6 +89,7 @@
     <ClCompile Include="Engine\Graphics\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Graphics\Buffer.h" />
     <ClInclude Include="Engine\Engine.h" />
     <ClInclude Include="Engine\Dev\Log.h" />
     <ClInclude Include="Engine\Graphics\Renderer.h" />

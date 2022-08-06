@@ -176,24 +176,7 @@ private:
 	bool isDeviceSuitable(VkPhysicalDevice device);
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	bool hasStencilComponent(VkFormat format);
-	uint32_t findMemoryType(
-		uint32_t typeFilter,
-		VkMemoryPropertyFlags properties);
 
-	void createBuffer(
-		VkDeviceSize size,
-		VkBufferUsageFlags usage,
-		VkMemoryPropertyFlags properties,
-		VkBuffer& buffer,
-		VkDeviceMemory& bufferMemory);
-	void copyBuffer(
-		VkBuffer srcBuffer,
-		VkBuffer dstBuffer,
-		VkDeviceSize size);
-	VkImageView createImageView(
-		VkImage image,
-		VkFormat format,
-		VkImageAspectFlags aspectFlags);
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 public:

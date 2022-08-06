@@ -12,80 +12,6 @@ bool Texture::hasStencilComponent(VkFormat format)
 		format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-uint32_t Texture::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
-{
-	VkPhysicalDeviceMemoryProperties memProperties;
-	vkGetPhysicalDeviceMemoryProperties(this->renderer.getPhysicalDevice(), &memProperties);
-
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
-	{
-		if (typeFilter & (1 << i) &&
-			(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-		{
-			return i;
-		}
-	}
-
-	Log::error("Failed to find suitable memory type.");
-	return uint32_t(~0);
-}
-
-void Texture::createBuffer(
-	VkDeviceSize size, 
-	VkBufferUsageFlags usage, 
-	VkMemoryPropertyFlags properties, 
-	VkBuffer& buffer, 
-	VkDeviceMemory& bufferMemory)
-{
-	// Create buffer
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = size;
-	bufferInfo.usage = usage;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	if (vkCreateBuffer(
-		this->renderer.getDevice(),
-		&bufferInfo,
-		nullptr,
-		&buffer) != VK_SUCCESS)
-	{
-		Log::error("Failed to create buffer.");
-	}
-
-	// Get memory requirements from buffer
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(
-		this->renderer.getDevice(),
-		buffer,
-		&memRequirements
-	);
-
-	// Allocate memory for buffer
-	VkMemoryAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(
-		memRequirements.memoryTypeBits,
-		properties
-	);
-	if (vkAllocateMemory(
-		this->renderer.getDevice(),
-		&allocInfo,
-		nullptr,
-		&bufferMemory) != VK_SUCCESS)
-	{
-		Log::error("Failed to allocate vertex buffer memory.");
-	}
-
-	// Bind memory to buffer
-	vkBindBufferMemory(
-		this->renderer.getDevice(),
-		buffer,
-		bufferMemory,
-		0
-	);
-}
-
 void Texture::createImage(
 	uint32_t width, 
 	uint32_t height, 
@@ -124,7 +50,8 @@ void Texture::createImage(
 	VkMemoryAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(
+	allocInfo.memoryTypeIndex = Buffer::findMemoryType(
+		this->renderer.getPhysicalDevice(),
 		memRequirements.memoryTypeBits,
 		properties
 	);
@@ -142,7 +69,11 @@ void Texture::createImage(
 	);
 }
 
-VkImageView Texture::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+VkImageView Texture::createImageView(
+	VkDevice device,
+	VkImage image, 
+	VkFormat format, 
+	VkImageAspectFlags aspectFlags)
 {
 	// Image view info
 	VkImageViewCreateInfo viewInfo{};
@@ -162,7 +93,7 @@ VkImageView Texture::createImageView(VkImage image, VkFormat format, VkImageAspe
 
 	// Create image view
 	VkImageView imageView;
-	if (vkCreateImageView(this->renderer.getDevice(), &viewInfo, nullptr, &imageView))
+	if (vkCreateImageView(device, &viewInfo, nullptr, &imageView))
 		Log::error("Failed to create texture image view.");
 
 	return imageView;
@@ -296,7 +227,9 @@ bool Texture::createTextureImage(const std::string& filePath)
 	// Staging buffer
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	this->createBuffer(
+	Buffer::createBuffer(
+		this->renderer.getPhysicalDevice(),
+		this->renderer.getDevice(),
 		imageSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -361,7 +294,8 @@ bool Texture::createTextureImage(const std::string& filePath)
 
 bool Texture::createTextureImageView()
 {
-	this->imageView = this->createImageView(
+	this->imageView = Texture::createImageView(
+		this->renderer.getDevice(),
 		this->image,
 		VK_FORMAT_R8G8B8A8_SRGB,
 		VK_IMAGE_ASPECT_COLOR_BIT
@@ -451,7 +385,8 @@ bool Texture::createAsDepthTexture(uint32_t width, uint32_t height)
 	);
 
 	// Create depth image view
-	this->imageView = this->createImageView(
+	this->imageView = Texture::createImageView(
+		this->renderer.getDevice(),
 		this->image,
 		depthFormat,
 		VK_IMAGE_ASPECT_DEPTH_BIT

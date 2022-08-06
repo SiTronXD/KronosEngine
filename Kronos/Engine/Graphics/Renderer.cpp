@@ -455,7 +455,8 @@ void Renderer::createImageViews()
 	swapChainImageViews.resize(swapChainImages.size());
 	for (size_t i = 0; i < swapChainImages.size(); ++i)
 	{
-		this->swapChainImageViews[i] = this->createImageView(
+		this->swapChainImageViews[i] = Texture::createImageView(
+			this->device,
 			this->swapChainImages[i],
 			this->swapChainImageFormat,
 			VK_IMAGE_ASPECT_COLOR_BIT
@@ -824,7 +825,9 @@ void Renderer::createVertexBuffer()
 	// Create staging buffer
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	this->createBuffer(
+	Buffer::createBuffer(
+		this->physicalDevice,
+		this->device,
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -852,7 +855,9 @@ void Renderer::createVertexBuffer()
 	vkUnmapMemory(this->device, stagingBufferMemory);
 
 	// Create vertex buffer
-	this->createBuffer(
+	Buffer::createBuffer(
+		this->physicalDevice,
+		this->device,
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -861,7 +866,7 @@ void Renderer::createVertexBuffer()
 	);
 
 	// Copy from staging buffer to real buffer
-	this->copyBuffer(stagingBuffer, this->vertexBuffer, bufferSize);
+	Buffer::copyBuffer(*this, stagingBuffer, this->vertexBuffer, bufferSize);
 
 	// Deallocate staging buffer
 	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
@@ -875,7 +880,9 @@ void Renderer::createIndexBuffer()
 	// Create staging buffer
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	this->createBuffer(
+	Buffer::createBuffer(
+		this->physicalDevice,
+		this->device,
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -890,7 +897,9 @@ void Renderer::createIndexBuffer()
 	vkUnmapMemory(this->device, stagingBufferMemory);
 
 	// Create real buffer
-	this->createBuffer(
+	Buffer::createBuffer(
+		this->physicalDevice,
+		this->device,
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -899,7 +908,7 @@ void Renderer::createIndexBuffer()
 	);
 
 	// Copy from staging buffer to real buffer
-	this->copyBuffer(stagingBuffer, this->indexBuffer, bufferSize);
+	Buffer::copyBuffer(*this, stagingBuffer, this->indexBuffer, bufferSize);
 
 	// Deallocate staging buffer
 	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
@@ -915,7 +924,9 @@ void Renderer::createUniformBuffers()
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		this->createBuffer(
+		Buffer::createBuffer(
+			this->physicalDevice,
+			this->device,
 			bufferSize,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -1521,120 +1532,6 @@ bool Renderer::hasStencilComponent(VkFormat format)
 {
 	return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
 		format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-
-uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
-{
-	VkPhysicalDeviceMemoryProperties memProperties;
-	vkGetPhysicalDeviceMemoryProperties(this->physicalDevice, &memProperties);
-
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
-	{
-		if (typeFilter & (1 << i) &&
-			(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-		{
-			return i;
-		}
-	}
-
-	Log::error("Failed to find suitable memory type.");
-	return uint32_t(~0);
-}
-
-void Renderer::createBuffer(
-	VkDeviceSize size, 
-	VkBufferUsageFlags usage, 
-	VkMemoryPropertyFlags properties, 
-	VkBuffer& buffer, 
-	VkDeviceMemory& bufferMemory)
-{
-	// Create buffer
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = size;
-	bufferInfo.usage = usage;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	if (vkCreateBuffer(
-		this->device,
-		&bufferInfo,
-		nullptr,
-		&buffer) != VK_SUCCESS)
-	{
-		Log::error("Failed to create buffer.");
-	}
-
-	// Get memory requirements from buffer
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(
-		this->device,
-		buffer,
-		&memRequirements
-	);
-
-	// Allocate memory for buffer
-	VkMemoryAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(
-		memRequirements.memoryTypeBits,
-		properties
-	);
-	if (vkAllocateMemory(
-		this->device,
-		&allocInfo,
-		nullptr,
-		&bufferMemory) != VK_SUCCESS)
-	{
-		Log::error("Failed to allocate vertex buffer memory.");
-	}
-
-	// Bind memory to buffer
-	vkBindBufferMemory(
-		this->device,
-		buffer,
-		bufferMemory,
-		0
-	);
-}
-
-void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-{
-	VkCommandBuffer commandBuffer = this->beginSingleTimeCommands();
-
-	// Record copy buffer
-	VkBufferCopy copyRegion{};
-	copyRegion.srcOffset = 0;
-	copyRegion.dstOffset = 0;
-	copyRegion.size = size;
-	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-	this->endSingleTimeCommands(commandBuffer);
-}
-
-VkImageView Renderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
-{
-	// Image view info
-	VkImageViewCreateInfo viewInfo{};
-	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	viewInfo.image = image;
-	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	viewInfo.format = format;
-	viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-	viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-	viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-	viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-	viewInfo.subresourceRange.aspectMask = aspectFlags;
-	viewInfo.subresourceRange.baseMipLevel = 0;
-	viewInfo.subresourceRange.levelCount = 1;
-	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount = 1;
-
-	// Create image view
-	VkImageView imageView;
-	if (vkCreateImageView(this->device, &viewInfo, nullptr, &imageView))
-		Log::error("Failed to create texture image view.");
-
-	return imageView;
 }
 
 VkCommandBuffer Renderer::beginSingleTimeCommands()

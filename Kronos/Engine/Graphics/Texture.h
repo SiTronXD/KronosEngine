@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#include "../Application/Window.h"
+#include "Buffer.h"
 
 class Renderer;
 
@@ -19,15 +19,6 @@ private:
 
 	bool hasStencilComponent(VkFormat format);
 
-	uint32_t findMemoryType(
-		uint32_t typeFilter,
-		VkMemoryPropertyFlags properties);
-	void createBuffer(
-		VkDeviceSize size,
-		VkBufferUsageFlags usage,
-		VkMemoryPropertyFlags properties,
-		VkBuffer& buffer,
-		VkDeviceMemory& bufferMemory);
 	void createImage(
 		uint32_t width,
 		uint32_t height,
@@ -37,10 +28,6 @@ private:
 		VkMemoryPropertyFlags properties,
 		VkImage& image,
 		VkDeviceMemory& imageMemory);
-	VkImageView createImageView(
-		VkImage image,
-		VkFormat format,
-		VkImageAspectFlags aspectFlags);
 	void transitionImageLayout(
 		VkImage image,
 		VkFormat format,
@@ -70,6 +57,12 @@ public:
 		VkImageTiling tiling,
 		VkFormatFeatureFlags features);
 	static VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
+	static VkImageView createImageView(
+		VkDevice device,
+		VkImage image,
+		VkFormat format,
+		VkImageAspectFlags aspectFlags
+	);
 
 	inline VkImage& getImage() { return this->image; }
 	inline VkDeviceMemory& getImageMemory() { return this->imageMemory; }
