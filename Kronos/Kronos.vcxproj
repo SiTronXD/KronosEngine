@@ -80,6 +80,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Graphics\CommandBufferArray.cpp" />
+    <ClCompile Include="Engine\Graphics\CommandPool.cpp" />
+    <ClCompile Include="Engine\Graphics\CommandBuffer.cpp" />
     <ClCompile Include="Engine\Graphics\Buffer.cpp" />
     <ClCompile Include="Engine\Engine.cpp" />
     <ClCompile Include="Engine\Dev\Log.cpp" />
@@ -91,6 +94,9 @@
     <ClCompile Include="Engine\Graphics\VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Graphics\CommandBufferArray.h" />
+    <ClInclude Include="Engine\Graphics\CommandPool.h" />
+    <ClInclude Include="Engine\Graphics\CommandBuffer.h" />
     <ClInclude Include="Engine\Graphics\Buffer.h" />
     <ClInclude Include="Engine\Engine.h" />
     <ClInclude Include="Engine\Dev\Log.h" />

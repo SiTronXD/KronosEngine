@@ -2,10 +2,12 @@
 
 #include <optional>
 
+#include "../Dev/Log.h"
 #include "../Application/Window.h"
 #include "Texture.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "CommandBufferArray.h"
 
 struct UniformBufferObject
 {
@@ -60,8 +62,8 @@ private:
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 
-	VkCommandPool commandPool;
-	std::vector<VkCommandBuffer> commandBuffers;
+	CommandPool commandPool;
+	CommandBufferArray commandBuffers;
 
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
@@ -95,12 +97,10 @@ private:
 	void createRenderPass();
 	void createDescriptorSetLayout();
 	void createGraphicsPipeline();
-	void createCommandPool();
 	void createFramebuffers();
 	void createUniformBuffers();
 	void createDescriptorPool();
 	void createDescriptorSets();
-	void createCommandBuffers();
 	void createSyncObjects();
 
 	void updateUniformBuffer(uint32_t currentImage);
@@ -120,10 +120,9 @@ private:
 	bool checkValidationLayerSupport();
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 	bool isDeviceSuitable(VkPhysicalDevice device);
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	bool hasStencilComponent(VkFormat format);
 
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	void recordCommandBuffer(uint32_t imageIndex);
 
 public:
 	bool framebufferResized = false;
@@ -138,9 +137,10 @@ public:
 	void drawFrame();
 
 	// Vulkan
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
+	inline CommandPool& getCommandPool() { return this->commandPool; }
 	inline VkPhysicalDevice& getPhysicalDevice() { return this->physicalDevice; }
 	inline VkDevice& getDevice() { return this->device; }
+	inline VkQueue& getGraphicsQueue() { return this->graphicsQueue; }
 };

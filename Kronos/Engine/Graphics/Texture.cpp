@@ -1,6 +1,5 @@
 #include "Texture.h"
 
-#include "../Dev/Log.h"
 #include "Renderer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -101,7 +100,7 @@ VkImageView Texture::createImageView(
 
 void Texture::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-	VkCommandBuffer commandBuffer = this->renderer.beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = CommandBuffer::beginSingleTimeCommands(this->renderer);
 
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -173,12 +172,15 @@ void Texture::transitionImageLayout(VkImage image, VkFormat format, VkImageLayou
 		1, &barrier
 	);
 
-	this->renderer.endSingleTimeCommands(commandBuffer);
+	CommandBuffer::endSingleTimeCommands(
+		this->renderer,
+		commandBuffer
+	);
 }
 
 void Texture::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 {
-	VkCommandBuffer commandBuffer = this->renderer.beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = CommandBuffer::beginSingleTimeCommands(this->renderer);
 
 	VkBufferImageCopy region{};
 	region.bufferOffset = 0;
@@ -202,7 +204,10 @@ void Texture::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, 
 		&region
 	);
 
-	this->renderer.endSingleTimeCommands(commandBuffer);
+	CommandBuffer::endSingleTimeCommands(
+		this->renderer,
+		commandBuffer
+	);
 }
 
 bool Texture::createTextureImage(const std::string& filePath)

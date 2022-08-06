@@ -1,6 +1,5 @@
 #include "Buffer.h"
 
-#include "../Dev/Log.h"
 #include "Renderer.h"
 
 Buffer::Buffer(Renderer& renderer)
@@ -98,7 +97,7 @@ void Buffer::copyBuffer(
 	Renderer& renderer,
 	VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
-	VkCommandBuffer commandBuffer = renderer.beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = CommandBuffer::beginSingleTimeCommands(renderer);
 
 	// Record copy buffer
 	VkBufferCopy copyRegion{};
@@ -107,7 +106,10 @@ void Buffer::copyBuffer(
 	copyRegion.size = size;
 	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-	renderer.endSingleTimeCommands(commandBuffer);
+	CommandBuffer::endSingleTimeCommands(
+		renderer,
+		commandBuffer
+	);
 }
 
 void Buffer::cleanup()

@@ -1,7 +1,5 @@
 #include "Renderer.h"
 
-#include "../Dev/Log.h"
-
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -119,24 +117,20 @@ void Renderer::initVulkan()
 	this->createRenderPass();
 	this->createDescriptorSetLayout();
 	this->createGraphicsPipeline();
-	this->createCommandPool();
-	
-	this->depthTexture.createAsDepthTexture(
-		this->swapChainExtent.width,
-		this->swapChainExtent.height
-	);
 
+	this->commandPool.create();
+	this->commandBuffers.createCommandBuffers(MAX_FRAMES_IN_FLIGHT);
+	
 	this->createFramebuffers();
 
+	// Shader resources
 	this->texture.createFromFile("Resources/Textures/poggers.PNG");
-
 	this->vertexBuffer.createVertexBuffer(vertices);
 	this->indexBuffer.createIndexBuffer(indices);
 	
 	this->createUniformBuffers();
 	this->createDescriptorPool();
 	this->createDescriptorSets();
-	this->createCommandBuffers();
 	this->createSyncObjects();
 }
 
@@ -168,8 +162,7 @@ void Renderer::cleanup()
 		vkDestroyFence(this->device, this->inFlightFences[i], nullptr);
 	}
 
-	// Destroys command pool and command buffers allocated from it
-	vkDestroyCommandPool(this->device, this->commandPool, nullptr);
+	this->commandPool.cleanup();
 	vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
 	vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
 	vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
@@ -766,27 +759,14 @@ void Renderer::createGraphicsPipeline()
 	vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
 }
 
-void Renderer::createCommandPool()
-{
-	QueueFamilyIndices queueFamilyIndices =
-		findQueueFamilies(this->physicalDevice);
-
-	VkCommandPoolCreateInfo poolInfo{};
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-	if (vkCreateCommandPool(
-		this->device,
-		&poolInfo,
-		nullptr,
-		&this->commandPool) != VK_SUCCESS)
-	{
-		Log::error("Failed to create command pool.");
-	}
-}
-
 void Renderer::createFramebuffers()
 {
+	// Create depth texture that the frame buffers will use
+	this->depthTexture.createAsDepthTexture(
+		this->swapChainExtent.width,
+		this->swapChainExtent.height
+	);
+
 	// Create one framebuffer for each swapchain image view
 	this->swapChainFramebuffers.resize(this->swapChainImageViews.size());
 	for (size_t i = 0; i < this->swapChainImageViews.size(); ++i)
@@ -927,25 +907,6 @@ void Renderer::createDescriptorSets()
 	}
 }
 
-void Renderer::createCommandBuffers()
-{
-	this->commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-
-	// Allocate command buffer from command pool
-	VkCommandBufferAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
-	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	if (vkAllocateCommandBuffers(
-		this->device,
-		&allocInfo,
-		this->commandBuffers.data()) != VK_SUCCESS)
-	{
-		Log::error("Failed to allocate command buffers.");
-	}
-}
-
 void Renderer::createSyncObjects()
 {
 	this->imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1015,11 +976,8 @@ void Renderer::drawFrame()
 	// Only reset the fence if we are submitting work
 	vkResetFences(this->device, 1, &this->inFlightFences[this->currentFrame]);
 
-	// Reset command buffer
-	vkResetCommandBuffer(this->commandBuffers[this->currentFrame], 0);
-
 	// Record command buffer
-	this->recordCommandBuffer(this->commandBuffers[this->currentFrame], imageIndex);
+	this->recordCommandBuffer(imageIndex);
 
 	// Info for submitting command buffer
 	VkSubmitInfo submitInfo{};
@@ -1031,7 +989,7 @@ void Renderer::drawFrame()
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &this->commandBuffers[this->currentFrame];
+	submitInfo.pCommandBuffers = &this->commandBuffers.getCommandBuffer(this->currentFrame).getCommandBuffer();
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
@@ -1153,10 +1111,6 @@ void Renderer::recreateSwapChain()
 
 	this->createSwapChain();
 	this->createImageViews();
-	this->depthTexture.createAsDepthTexture(
-		this->swapChainExtent.width,
-		this->swapChainExtent.height
-	);
 	this->createFramebuffers();
 }
 
@@ -1435,55 +1389,12 @@ bool Renderer::hasStencilComponent(VkFormat format)
 		format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-VkCommandBuffer Renderer::beginSingleTimeCommands()
+void Renderer::recordCommandBuffer(uint32_t imageIndex)
 {
-	VkCommandBuffer commandBuffer;
+	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrame);
 
-	// Allocate command buffer
-	VkCommandBufferAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = this->commandPool;
-	allocInfo.commandBufferCount = 1;
-	vkAllocateCommandBuffers(this->device, &allocInfo, &commandBuffer);
-
-	// Begin recording command buffer
-	VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-	return commandBuffer;
-}
-
-void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer)
-{
-	// End recording command buffer
-	vkEndCommandBuffer(commandBuffer);
-
-	// Submit command buffer
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-	vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(this->graphicsQueue);
-
-	// Free command buffer
-	vkFreeCommandBuffers(this->device, this->commandPool, 1, &commandBuffer);
-}
-
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
-{
-	// Reset and begin recording into command buffer
-	VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = 0;
-	beginInfo.pInheritanceInfo = nullptr;
-	if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-	{
-		Log::error("Failed to begin recording command buffer.");
-	}
+	// Begin
+	commandBuffer.resetAndBegin();
 
 	// Begin render pass
 	VkRenderPassBeginInfo renderPassInfo{};
@@ -1501,18 +1412,10 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	renderPassInfo.pClearValues = clearValues.data();
 
 	// Record beginning render pass
-	vkCmdBeginRenderPass(
-		commandBuffer,
-		&renderPassInfo,
-		VK_SUBPASS_CONTENTS_INLINE
-	);
+	commandBuffer.beginRenderPass(renderPassInfo);
 
 	// Record binding graphics pipeline
-	vkCmdBindPipeline(
-		commandBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		this->graphicsPipeline
-	);
+	commandBuffer.bindPipeline(this->graphicsPipeline);
 
 	// Record dynamic viewport
 	VkViewport viewport{};
@@ -1522,43 +1425,26 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 	viewport.height = static_cast<float>(swapChainExtent.height);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
-	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+	commandBuffer.setViewport(viewport);
 
 	// Record dynamic scissor
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
 	scissor.extent = this->swapChainExtent;
-	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+	commandBuffer.setScissor(scissor);
 
 	// Record binding vertex/index buffer
-	VkBuffer vertexBuffers[] = { this->vertexBuffer.getBuffer() };
-	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-	vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	commandBuffer.bindVertexBuffer(this->vertexBuffer);
+	commandBuffer.bindIndexBuffer(this->indexBuffer);
 
 	// Record binding descriptor sets
-	vkCmdBindDescriptorSets(
-		commandBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		this->pipelineLayout,
-		0,
-		1,
-		&this->descriptorSets[this->currentFrame],
-		0,
-		nullptr
-	);
+	commandBuffer.bindDescriptorSet(this->pipelineLayout, this->descriptorSets[this->currentFrame]);
 
 	// Record draw!
-	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+	commandBuffer.drawIndexed(indices.size());
 
-	// Record ending render pass
-	vkCmdEndRenderPass(commandBuffer);
-
-	// Finish recording
-	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-	{
-		Log::error("Failed to record command buffer.");
-	}
+	// End render pass and stop recording
+	commandBuffer.endPassAndRecording();
 }
 
 Renderer::Renderer()
@@ -1569,8 +1455,23 @@ Renderer::Renderer()
 	vertexBuffer(*this),
 	indexBuffer(*this),
 
-	commandPool(VK_NULL_HANDLE),
-	debugMessenger(VK_NULL_HANDLE)
+	commandPool(*this),
+	commandBuffers(*this, commandPool),
+
+	debugMessenger(VK_NULL_HANDLE),
+	descriptorPool(VK_NULL_HANDLE),
+	descriptorSetLayout(VK_NULL_HANDLE),
+	device(VK_NULL_HANDLE),
+	graphicsPipeline(VK_NULL_HANDLE),
+	graphicsQueue(VK_NULL_HANDLE),
+	presentQueue(VK_NULL_HANDLE),
+	instance(VK_NULL_HANDLE),
+	pipelineLayout(VK_NULL_HANDLE),
+	renderPass(VK_NULL_HANDLE),
+	surface(VK_NULL_HANDLE),
+	swapChain(VK_NULL_HANDLE),
+	swapChainExtent(VkExtent2D{ 0, 0 }),
+	swapChainImageFormat(VK_FORMAT_A1R5G5B5_UNORM_PACK16)
 {
 }
 
