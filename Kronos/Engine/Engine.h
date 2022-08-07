@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Application/Window.h"
 #include "Graphics/Renderer.h"
 
 class Engine

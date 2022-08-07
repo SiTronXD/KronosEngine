@@ -15,8 +15,8 @@ CommandPool::~CommandPool()
 
 void CommandPool::create()
 {
-	QueueFamilyIndices queueFamilyIndices =
-		this->renderer.findQueueFamilies(this->renderer.getPhysicalDevice());
+	QueueFamilyIndices& queueFamilyIndices =
+		this->renderer.getQueueFamilies().getIndices();
 
 	// Create command pool for graphics queue
 	VkCommandPoolCreateInfo poolInfo{};

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Application/Window.h"
+#include <vulkan/vulkan.h>
 
 class Renderer;
 

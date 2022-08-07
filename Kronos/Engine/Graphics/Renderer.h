@@ -8,24 +8,13 @@
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "CommandBufferArray.h"
+#include "QueueFamilies.h"
 
 struct UniformBufferObject
 {
 	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
-};
-
-struct QueueFamilyIndices
-{
-	std::optional<uint32_t> graphicsFamily;
-	std::optional<uint32_t> presentFamily;
-
-	bool isComplete()
-	{
-		return graphicsFamily.has_value() &&
-			presentFamily.has_value();
-	}
 };
 
 struct SwapChainSupportDetails
@@ -47,8 +36,7 @@ private:
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice device;
 
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
+	QueueFamilies queueFamilies;
 
 	VkSwapchainKHR swapChain;
 	std::vector<VkImage> swapChainImages;
@@ -137,10 +125,8 @@ public:
 	void drawFrame();
 
 	// Vulkan
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-
 	inline CommandPool& getCommandPool() { return this->commandPool; }
 	inline VkPhysicalDevice& getPhysicalDevice() { return this->physicalDevice; }
 	inline VkDevice& getDevice() { return this->device; }
-	inline VkQueue& getGraphicsQueue() { return this->graphicsQueue; }
+	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
 };

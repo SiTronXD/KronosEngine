@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 
-#include "../Application/Window.h"
+#include <vulkan/vulkan.h>
 
 class Renderer;
 

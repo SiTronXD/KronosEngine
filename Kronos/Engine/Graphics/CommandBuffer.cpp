@@ -132,7 +132,7 @@ void CommandBuffer::endSingleTimeCommands(
 	Renderer& renderer,
 	VkCommandBuffer commandBuffer)
 {
-	VkQueue& queue = renderer.getGraphicsQueue();
+	VkQueue& queue = renderer.getQueueFamilies().getGraphicsQueue();
 
 	// End recording command buffer
 	vkEndCommandBuffer(commandBuffer);
@@ -145,6 +145,11 @@ void CommandBuffer::endSingleTimeCommands(
 	vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
 	vkQueueWaitIdle(queue);
 
-	// Free command buffer
-	vkFreeCommandBuffers(renderer.getDevice(), renderer.getCommandPool().getCommandPool(), 1, &commandBuffer);
+	// Deallocate temporary command buffer
+	vkFreeCommandBuffers(
+		renderer.getDevice(), 
+		renderer.getCommandPool().getCommandPool(), 
+		1, 
+		&commandBuffer
+	);
 }

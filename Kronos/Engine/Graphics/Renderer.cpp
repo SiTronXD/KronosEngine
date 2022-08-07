@@ -261,7 +261,7 @@ void Renderer::pickPhysicalDevice()
 {
 	// Get device count
 	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+	vkEnumeratePhysicalDevices(this->instance, &deviceCount, nullptr);
 
 	// No devices found
 	if (deviceCount == 0)
@@ -272,19 +272,19 @@ void Renderer::pickPhysicalDevice()
 
 	// Get device handles
 	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+	vkEnumeratePhysicalDevices(this->instance, &deviceCount, devices.data());
 
 	// Pick the first best found device
 	for (const auto& device : devices)
 	{
 		if (isDeviceSuitable(device))
 		{
-			physicalDevice = device;
+			this->physicalDevice = device;
 			break;
 		}
 	}
 
-	if (physicalDevice == VK_NULL_HANDLE)
+	if (this->physicalDevice == VK_NULL_HANDLE)
 	{
 		Log::error("Failed to find a suitable GPU.");
 		return;
@@ -294,7 +294,7 @@ void Renderer::pickPhysicalDevice()
 void Renderer::createLogicalDevice()
 {
 	// ---------- Queue families to be used ----------
-	QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice);
+	QueueFamilyIndices& indices = this->queueFamilies.getIndices();
 
 	// Unique queue families to be used
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -359,11 +359,8 @@ void Renderer::createLogicalDevice()
 		return;
 	}
 
-	// Get graphics queue handle
-	vkGetDeviceQueue(this->device, indices.graphicsFamily.value(), 0, &this->graphicsQueue);
-
-	// Get present queue handle
-	vkGetDeviceQueue(this->device, indices.presentFamily.value(), 0, &this->presentQueue);
+	// Extract queue family handles from the device
+	this->queueFamilies.extractQueueHandles(this->device);
 }
 
 void Renderer::createSwapChain()
@@ -397,7 +394,7 @@ void Renderer::createSwapChain()
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	// How swap chain images are used across multiple queue families
-	QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice);
+	QueueFamilyIndices& indices = this->queueFamilies.getIndices();
 	uint32_t queueFamilyIndices[] =
 	{
 		indices.graphicsFamily.value(),
@@ -997,7 +994,7 @@ void Renderer::drawFrame()
 
 	// Submit command buffer
 	if (vkQueueSubmit(
-		this->graphicsQueue,
+		this->queueFamilies.getGraphicsQueue(),
 		1,
 		&submitInfo,
 		this->inFlightFences[this->currentFrame])
@@ -1019,7 +1016,7 @@ void Renderer::drawFrame()
 	presentInfo.pResults = nullptr;
 
 	// Present!
-	result = vkQueuePresentKHR(this->presentQueue, &presentInfo);
+	result = vkQueuePresentKHR(this->queueFamilies.getPresentQueue(), &presentInfo);
 
 	// Window resize?
 	if (result == VK_ERROR_OUT_OF_DATE_KHR ||
@@ -1319,7 +1316,7 @@ bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device)
 bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
 {
 	// Find queue families
-	QueueFamilyIndices indices = findQueueFamilies(device);
+	QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(this->surface, device);
 
 	// Find required extension support
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
@@ -1338,49 +1335,16 @@ bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
 	VkPhysicalDeviceFeatures supportedFeatures;
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-	return indices.isComplete() &&
+	bool foundSuitableDevice = indices.isComplete() &&
 		extensionsSupported &&
 		swapChainAdequate &&
 		supportedFeatures.samplerAnisotropy;
-}
 
-QueueFamilyIndices Renderer::findQueueFamilies(VkPhysicalDevice device)
-{
-	QueueFamilyIndices indices;
+	// Set indices after finding a suitable device
+	if (foundSuitableDevice)
+		this->queueFamilies.setIndices(indices);
 
-	// Get queue family handles
-	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-	// Find indices
-	int i = 0;
-	for (const auto& queueFamily : queueFamilies)
-	{
-		// Graphics queue family
-		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-			indices.graphicsFamily = i;
-
-		// Present queue family
-		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(
-			device,
-			i,
-			this->surface,
-			&presentSupport
-		);
-		if (presentSupport)
-			indices.presentFamily = i;
-
-		// Done
-		if (indices.isComplete())
-			break;
-
-		i++;
-	}
-
-	return indices;
+	return foundSuitableDevice;
 }
 
 bool Renderer::hasStencilComponent(VkFormat format)
@@ -1463,8 +1427,6 @@ Renderer::Renderer()
 	descriptorSetLayout(VK_NULL_HANDLE),
 	device(VK_NULL_HANDLE),
 	graphicsPipeline(VK_NULL_HANDLE),
-	graphicsQueue(VK_NULL_HANDLE),
-	presentQueue(VK_NULL_HANDLE),
 	instance(VK_NULL_HANDLE),
 	pipelineLayout(VK_NULL_HANDLE),
 	renderPass(VK_NULL_HANDLE),
