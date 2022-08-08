@@ -21,7 +21,7 @@ Window::~Window()
 	glfwDestroyWindow(this->windowHandle);
 	glfwTerminate();
 }
-#include "../Dev/Log.h"
+
 void Window::init(Renderer& renderer, int width, int height)
 {
 	// Set pointer
@@ -48,6 +48,16 @@ void Window::init(Renderer& renderer, int width, int height)
 void Window::update()
 {
 	glfwPollEvents();
+}
+
+void Window::awaitEvents()
+{
+	glfwWaitEvents();
+}
+
+void Window::getFramebufferSize(int& widthOutput, int& heightOutput)
+{
+	glfwGetFramebufferSize(this->windowHandle, &widthOutput, &heightOutput);
 }
 
 bool Window::isRunning() const

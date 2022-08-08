@@ -93,6 +93,7 @@
     <ClCompile Include="Engine\Graphics\Texture.cpp" />
     <ClCompile Include="Engine\Graphics\VertexBuffer.cpp" />
     <ClCompile Include="Engine\Graphics\QueueFamilies.cpp" />
+    <ClCompile Include="Engine\Graphics\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Graphics\CommandBufferArray.h" />
@@ -107,6 +108,7 @@
     <ClInclude Include="Engine\Graphics\VertexBuffer.h" />
     <ClInclude Include="Engine\Graphics\IndexBuffer.h" />
     <ClInclude Include="Engine\Graphics\QueueFamilies.h" />
+    <ClInclude Include="Engine\Graphics\Swapchain.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

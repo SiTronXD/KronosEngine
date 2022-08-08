@@ -9,19 +9,13 @@
 #include "IndexBuffer.h"
 #include "CommandBufferArray.h"
 #include "QueueFamilies.h"
+#include "Swapchain.h"
 
 struct UniformBufferObject
 {
 	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
-};
-
-struct SwapChainSupportDetails
-{
-	VkSurfaceCapabilitiesKHR capabilities;
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> presentModes;
 };
 
 class Renderer
@@ -38,12 +32,7 @@ private:
 
 	QueueFamilies queueFamilies;
 
-	VkSwapchainKHR swapChain;
-	std::vector<VkImage> swapChainImages;
-	std::vector<VkImageView> swapChainImageViews;
-	std::vector<VkFramebuffer> swapChainFramebuffers;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
+	Swapchain swapchain;
 
 	VkRenderPass renderPass;
 	VkDescriptorSetLayout descriptorSetLayout;
@@ -66,7 +55,6 @@ private:
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
-	Texture depthTexture;
 	Texture texture;
 
 	uint32_t currentFrame = 0;
@@ -80,12 +68,9 @@ private:
 	void createSurface();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
-	void createSwapChain();
-	void createImageViews();
 	void createRenderPass();
 	void createDescriptorSetLayout();
 	void createGraphicsPipeline();
-	void createFramebuffers();
 	void createUniformBuffers();
 	void createDescriptorPool();
 	void createDescriptorSets();
@@ -93,22 +78,13 @@ private:
 
 	void updateUniformBuffer(uint32_t currentImage);
 
-	void cleanupSwapChain();
-	void recreateSwapChain();
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
-	VkSurfaceFormatKHR chooseSwapSurfaceFormat(
-		const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR chooseSwapPresentMode(
-		const std::vector<VkPresentModeKHR>& availablePresentModes);
-	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	std::vector<const char*> getRequiredExtensions();
 	bool checkValidationLayerSupport();
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 	bool isDeviceSuitable(VkPhysicalDevice device);
-	bool hasStencilComponent(VkFormat format);
 
 	void recordCommandBuffer(uint32_t imageIndex);
 
@@ -126,7 +102,11 @@ public:
 
 	// Vulkan
 	inline CommandPool& getCommandPool() { return this->commandPool; }
+	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
+
 	inline VkPhysicalDevice& getPhysicalDevice() { return this->physicalDevice; }
 	inline VkDevice& getDevice() { return this->device; }
-	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
+	inline VkSurfaceKHR& getSurface() { return this->surface; }
+	inline VkRenderPass& getRenderPass() { return this->renderPass; }
+	inline Window& getWindow() { return *this->window; }
 };

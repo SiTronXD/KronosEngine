@@ -16,6 +16,9 @@ public:
 
 	void init(Renderer& renderer, int width, int height);
 	void update();
+	void awaitEvents();
+
+	void getFramebufferSize(int& widthOutput, int& heightOutput);
 
 	bool isRunning() const;
 

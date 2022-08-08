@@ -5,7 +5,6 @@
 #include <fstream>
 #include <set>
 #include <chrono>
-#include <algorithm>
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -112,16 +111,17 @@ void Renderer::initVulkan()
 	this->createSurface();
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
-	this->createSwapChain();
-	this->createImageViews();
+	
+	this->swapchain.createSwapchain();
+
 	this->createRenderPass();
 	this->createDescriptorSetLayout();
 	this->createGraphicsPipeline();
 
 	this->commandPool.create();
 	this->commandBuffers.createCommandBuffers(MAX_FRAMES_IN_FLIGHT);
-	
-	this->createFramebuffers();
+
+	this->swapchain.createFramebuffers();
 
 	// Shader resources
 	this->texture.createFromFile("Resources/Textures/poggers.PNG");
@@ -139,7 +139,7 @@ void Renderer::cleanup()
 	// Wait for device before cleanup
 	vkDeviceWaitIdle(this->device);
 
-	this->cleanupSwapChain();
+	this->swapchain.cleanup();
 
 	this->texture.cleanup();
 
@@ -363,100 +363,11 @@ void Renderer::createLogicalDevice()
 	this->queueFamilies.extractQueueHandles(this->device);
 }
 
-void Renderer::createSwapChain()
-{
-	// Swap chain support
-	SwapChainSupportDetails swapChainSupport =
-		querySwapChainSupport(this->physicalDevice);
-
-	// Format, present mode and extent
-	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-	VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
-
-	// Image count
-	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-	if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
-	{
-		imageCount = swapChainSupport.capabilities.maxImageCount;
-	}
-
-	// Swap chain create info
-	VkSwapchainCreateInfoKHR createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = this->surface;
-
-	createInfo.minImageCount = imageCount;
-	createInfo.imageFormat = surfaceFormat.format;
-	createInfo.imageColorSpace = surfaceFormat.colorSpace;
-	createInfo.imageExtent = extent;
-	createInfo.imageArrayLayers = 1;
-	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-	// How swap chain images are used across multiple queue families
-	QueueFamilyIndices& indices = this->queueFamilies.getIndices();
-	uint32_t queueFamilyIndices[] =
-	{
-		indices.graphicsFamily.value(),
-		indices.presentFamily.value()
-	};
-	if (indices.graphicsFamily != indices.presentFamily)
-	{
-		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-		createInfo.queueFamilyIndexCount = 2;
-		createInfo.pQueueFamilyIndices = queueFamilyIndices;
-	}
-	else
-	{
-		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		createInfo.queueFamilyIndexCount = 0; // Optional
-		createInfo.pQueueFamilyIndices = nullptr; // Optional
-	}
-
-	createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	createInfo.presentMode = presentMode;
-	createInfo.clipped = VK_TRUE;	// Clip pixels overlapped by other windows
-	createInfo.oldSwapchain = VK_NULL_HANDLE;
-
-	// Create swapchain
-	if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr, &this->swapChain) != VK_SUCCESS)
-	{
-		Log::error("Failed to created swapchain.");
-		return;
-	}
-
-	// We've only specified the minimum number of images, so the implementation
-	// could create more.
-	vkGetSwapchainImagesKHR(this->device, this->swapChain, &imageCount, nullptr);
-	swapChainImages.resize(imageCount);
-	vkGetSwapchainImagesKHR(this->device, this->swapChain, &imageCount, swapChainImages.data());
-
-	// Save format and extent
-	this->swapChainImageFormat = surfaceFormat.format;
-	this->swapChainExtent = extent;
-}
-
-void Renderer::createImageViews()
-{
-	// Create an image view for each swapchain image
-	swapChainImageViews.resize(swapChainImages.size());
-	for (size_t i = 0; i < swapChainImages.size(); ++i)
-	{
-		this->swapChainImageViews[i] = Texture::createImageView(
-			this->device,
-			this->swapChainImages[i],
-			this->swapChainImageFormat,
-			VK_IMAGE_ASPECT_COLOR_BIT
-		);
-	}
-}
-
 void Renderer::createRenderPass()
 {
 	// Color attachment
 	VkAttachmentDescription colorAttachment{};
-	colorAttachment.format = swapChainImageFormat;
+	colorAttachment.format = this->swapchain.getFormat();
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -756,43 +667,6 @@ void Renderer::createGraphicsPipeline()
 	vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
 }
 
-void Renderer::createFramebuffers()
-{
-	// Create depth texture that the frame buffers will use
-	this->depthTexture.createAsDepthTexture(
-		this->swapChainExtent.width,
-		this->swapChainExtent.height
-	);
-
-	// Create one framebuffer for each swapchain image view
-	this->swapChainFramebuffers.resize(this->swapChainImageViews.size());
-	for (size_t i = 0; i < this->swapChainImageViews.size(); ++i)
-	{
-		std::array<VkImageView, 2> attachments =
-		{
-			this->swapChainImageViews[i],
-			this->depthTexture.getImageView()
-		};
-
-		VkFramebufferCreateInfo framebufferInfo{};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = swapChainExtent.width;
-		framebufferInfo.height = swapChainExtent.height;
-		framebufferInfo.layers = 1;
-		if (vkCreateFramebuffer(
-			this->device,
-			&framebufferInfo,
-			nullptr,
-			&this->swapChainFramebuffers[i]) != VK_SUCCESS)
-		{
-			Log::error("Failed to create framebuffer.");
-		}
-	}
-}
-
 void Renderer::createUniformBuffers()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -950,7 +824,7 @@ void Renderer::drawFrame()
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(
 		this->device,
-		this->swapChain,
+		this->swapchain.getSwapchain(),
 		UINT64_MAX,
 		this->imageAvailableSemaphores[this->currentFrame],
 		VK_NULL_HANDLE,
@@ -960,7 +834,7 @@ void Renderer::drawFrame()
 	// Window resize?
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 	{
-		this->recreateSwapChain();
+		this->swapchain.recreate();
 		return;
 	}
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -1009,7 +883,7 @@ void Renderer::drawFrame()
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
 
-	VkSwapchainKHR swapChains[] = { this->swapChain };
+	VkSwapchainKHR swapChains[] = { this->swapchain.getSwapchain() };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
 	presentInfo.pImageIndices = &imageIndex;
@@ -1024,7 +898,7 @@ void Renderer::drawFrame()
 		this->framebufferResized)
 	{
 		this->framebufferResized = false;
-		this->recreateSwapChain();
+		this->swapchain.recreate();
 	}
 	else if (result != VK_SUCCESS)
 	{
@@ -1058,7 +932,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 	);
 	ubo.proj = glm::perspective(
 		glm::radians(45.0f),
-		swapChainExtent.width / (float)swapChainExtent.height,
+		this->swapchain.getWidth() / (float) this->swapchain.getHeight(),
 		0.1f,
 		10.0f
 	);
@@ -1078,39 +952,6 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 	vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
 }
 
-void Renderer::cleanupSwapChain()
-{
-	this->depthTexture.cleanup();
-
-	for (auto framebuffer : swapChainFramebuffers)
-		vkDestroyFramebuffer(this->device, framebuffer, nullptr);
-
-	for (auto imageView : swapChainImageViews)
-		vkDestroyImageView(this->device, imageView, nullptr);
-
-	vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
-}
-
-void Renderer::recreateSwapChain()
-{
-	// Handle minimization when width/height is 0
-	int width = 0, height = 0;
-	glfwGetFramebufferSize(this->window->getWindowHandle(), &width, &height);
-	while (width == 0 || height == 0)
-	{
-		glfwGetFramebufferSize(this->window->getWindowHandle(), &width, &height);
-		glfwWaitEvents();
-	}
-
-	vkDeviceWaitIdle(this->device);
-
-	this->cleanupSwapChain();
-
-	this->createSwapChain();
-	this->createImageViews();
-	this->createFramebuffers();
-}
-
 void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
 	createInfo = {};
@@ -1122,108 +963,6 @@ void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoE
 		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
-}
-
-VkSurfaceFormatKHR Renderer::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
-{
-	// Find specific format/color space combination
-	for (const auto& availableFormat : availableFormats)
-	{
-		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
-			availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-		{
-			return availableFormat;
-		}
-	}
-
-	// Use the first format/color space combination
-	Log::warning("First surface format was chosen.");
-	return availableFormats[0];
-}
-
-VkPresentModeKHR Renderer::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
-{
-	// Find specific present mode
-	for (const auto& availablePresentMode : availablePresentModes)
-	{
-		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-			return availablePresentMode;
-	}
-
-	// Guaranteed to be available
-	return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
-{
-	if (capabilities.currentExtent.width != ~uint32_t(0))
-	{
-		return capabilities.currentExtent;
-	}
-	else
-	{
-		int width, height;
-		glfwGetFramebufferSize(this->window->getWindowHandle(), &width, &height);
-
-		VkExtent2D actualExtent =
-		{
-			static_cast<uint32_t>(width),
-			static_cast<uint32_t>(height)
-		};
-
-		actualExtent.width = std::clamp(
-			actualExtent.width,
-			capabilities.minImageExtent.width,
-			capabilities.maxImageExtent.width
-		);
-		actualExtent.height = std::clamp(
-			actualExtent.height,
-			capabilities.minImageExtent.height,
-			capabilities.maxImageExtent.height
-		);
-
-		return actualExtent;
-	}
-}
-
-SwapChainSupportDetails Renderer::querySwapChainSupport(VkPhysicalDevice device)
-{
-	SwapChainSupportDetails details;
-
-	// Capabilities
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-		device, this->surface, &details.capabilities
-	);
-
-	// Formats
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(
-		device, this->surface, &formatCount, nullptr
-	);
-	if (formatCount != 0)
-	{
-		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(
-			device, this->surface, &formatCount, details.formats.data()
-		);
-	}
-
-	// Presentation modes
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(
-		device, this->surface,
-		&presentModeCount, nullptr
-	);
-	if (presentModeCount != 0)
-	{
-		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(
-			device, this->surface,
-			&presentModeCount, details.presentModes.data()
-		);
-	}
-
-	return details;
 }
 
 VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
@@ -1321,14 +1060,14 @@ bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
 	// Find required extension support
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
 
-	// Swap chain with correct support
+	// Swapchain with correct support
 	bool swapChainAdequate = false;
 	if (extensionsSupported)
 	{
-		SwapChainSupportDetails swapChainSupport =
-			querySwapChainSupport(device);
-		swapChainAdequate = !swapChainSupport.formats.empty() &&
-			!swapChainSupport.presentModes.empty();
+		SwapchainSupportDetails swapchainSupport{};
+		Swapchain::querySwapChainSupport(this->surface, device, swapchainSupport);
+		swapChainAdequate = !swapchainSupport.formats.empty() &&
+			!swapchainSupport.presentModes.empty();
 	}
 
 	// Sampler anisotropy support
@@ -1347,12 +1086,6 @@ bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
 	return foundSuitableDevice;
 }
 
-bool Renderer::hasStencilComponent(VkFormat format)
-{
-	return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-		format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-
 void Renderer::recordCommandBuffer(uint32_t imageIndex)
 {
 	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrame);
@@ -1364,9 +1097,9 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 	VkRenderPassBeginInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = this->renderPass;
-	renderPassInfo.framebuffer = this->swapChainFramebuffers[imageIndex];
+	renderPassInfo.framebuffer = this->swapchain.getFramebuffer(imageIndex);
 	renderPassInfo.renderArea.offset = { 0, 0 };
-	renderPassInfo.renderArea.extent = this->swapChainExtent;
+	renderPassInfo.renderArea.extent = this->swapchain.getExtent();
 
 	// Clear values, for color and depth
 	std::array<VkClearValue, 2> clearValues{};
@@ -1385,8 +1118,8 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 	VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = static_cast<float>(swapChainExtent.width);
-	viewport.height = static_cast<float>(swapChainExtent.height);
+	viewport.width = static_cast<float>(this->swapchain.getWidth());
+	viewport.height = static_cast<float>(this->swapchain.getHeight());
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	commandBuffer.setViewport(viewport);
@@ -1394,7 +1127,7 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 	// Record dynamic scissor
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
-	scissor.extent = this->swapChainExtent;
+	scissor.extent = this->swapchain.getExtent();
 	commandBuffer.setScissor(scissor);
 
 	// Record binding vertex/index buffer
@@ -1413,7 +1146,6 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 
 Renderer::Renderer()
 	: window(nullptr),
-	depthTexture(*this),
 	texture(*this),
 
 	vertexBuffer(*this),
@@ -1421,6 +1153,7 @@ Renderer::Renderer()
 
 	commandPool(*this),
 	commandBuffers(*this, commandPool),
+	swapchain(*this),
 
 	debugMessenger(VK_NULL_HANDLE),
 	descriptorPool(VK_NULL_HANDLE),
@@ -1430,10 +1163,7 @@ Renderer::Renderer()
 	instance(VK_NULL_HANDLE),
 	pipelineLayout(VK_NULL_HANDLE),
 	renderPass(VK_NULL_HANDLE),
-	surface(VK_NULL_HANDLE),
-	swapChain(VK_NULL_HANDLE),
-	swapChainExtent(VkExtent2D{ 0, 0 }),
-	swapChainImageFormat(VK_FORMAT_A1R5G5B5_UNORM_PACK16)
+	surface(VK_NULL_HANDLE)
 {
 }
 
