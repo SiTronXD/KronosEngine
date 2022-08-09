@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 
 #define GLFW_MAX_NUM_KEYS (GLFW_KEY_LAST + 1)
+#define GLFW_MAX_NUM_MOUSE_BUTTONS (GLFW_MOUSE_BUTTON_8 + 1)
 
 enum class Keys
 {
@@ -36,13 +37,33 @@ enum class Keys
 	ESCAPE = GLFW_KEY_ESCAPE,
 };
 
+enum class Mouse
+{
+	LEFT_BUTTON = GLFW_MOUSE_BUTTON_LEFT,
+	RIGHT_BUTTON = GLFW_MOUSE_BUTTON_RIGHT
+};
+
 class Input
 {
 private:
+	friend class Window;
+
 	static bool keyDown[GLFW_MAX_NUM_KEYS];
+	static bool mouseButtonDown[GLFW_MAX_NUM_MOUSE_BUTTONS];
+
+	static float cursorX;
+	static float cursorY;
+	static float lastCursorX;
+	static float lastCursorY;
+
+	static void setCursor(const float& newCursorX, const float& newCursorY);
 
 public:
 	static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+	static void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
 	static inline bool isKeyDown(const Keys& key) { return Input::keyDown[(int) key]; }
+	static inline bool isMouseButtonDown(const Mouse& mouse) { return mouseButtonDown[(int) mouse]; }
+	static inline const float& getMouseDeltaX() { return Input::lastCursorX - Input::cursorX; }
+	static inline const float& getMouseDeltaY() { return Input::lastCursorY - Input::cursorY; }
 };

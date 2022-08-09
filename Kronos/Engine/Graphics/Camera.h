@@ -7,7 +7,7 @@ class Renderer;
 class Camera
 {
 private:
-	const float MOVEMENT_SPEED = 10.0f;
+	const float MOVEMENT_SPEED = 5.0f;
 
 	glm::mat4 viewMatrix;
 	glm::mat4 projectionMatrix;
@@ -16,6 +16,9 @@ private:
 	glm::vec3 forwardDir;
 	glm::vec3 rightDir;
 	glm::vec3 upDir;
+
+	float yaw;
+	float pitch;
 
 	Renderer& renderer;
 

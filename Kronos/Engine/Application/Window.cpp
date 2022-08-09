@@ -45,8 +45,9 @@ void Window::init(Renderer& renderer, int width, int height)
 	glfwSetWindowUserPointer(this->windowHandle, &renderer);
 	glfwSetFramebufferSizeCallback(this->windowHandle, framebufferResizeCallback);
 
-	// Set for keyboard callback
+	// Set for input callback
 	glfwSetKeyCallback(this->windowHandle, Input::glfwKeyCallback);
+	glfwSetMouseButtonCallback(this->windowHandle, Input::glfwMouseButtonCallback);
 }
 
 void Window::update()
@@ -60,6 +61,11 @@ void Window::update()
 		glfwSetWindowShouldClose(this->windowHandle, GLFW_TRUE);
 	}
 #endif
+
+	// Update cursor position
+	double cursorX, cursorY;
+	glfwGetCursorPos(this->windowHandle, &cursorX, &cursorY);
+	Input::setCursor((float) cursorX, (float) cursorY);
 }
 
 void Window::awaitEvents()
