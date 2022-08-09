@@ -52,6 +52,14 @@ void Window::init(Renderer& renderer, int width, int height)
 void Window::update()
 {
 	glfwPollEvents();
+
+	// Close when clicking escape
+#ifdef _DEBUG
+	if (Input::isKeyDown(Keys::ESCAPE))
+	{
+		glfwSetWindowShouldClose(this->windowHandle, GLFW_TRUE);
+	}
+#endif
 }
 
 void Window::awaitEvents()

@@ -97,6 +97,7 @@
     <ClCompile Include="Engine\Graphics\QueueFamilies.cpp" />
     <ClCompile Include="Engine\Graphics\Swapchain.cpp" />
     <ClCompile Include="Engine\SMath.cpp" />
+    <ClCompile Include="Engine\Application\Time.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Graphics\Camera.h" />
@@ -115,6 +116,7 @@
     <ClInclude Include="Engine\Graphics\Swapchain.h" />
     <ClInclude Include="Engine\SMath.h" />
     <ClInclude Include="Engine\Application\Input.h" />
+    <ClInclude Include="Engine\Application\Time.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

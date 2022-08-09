@@ -6,7 +6,7 @@ int main()
 	// Set flags for tracking CPU memory leaks
 	#ifdef _DEBUG
 		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-	#endif // _DEBUG
+	#endif
 
 	// Create engine within it's own scope
 	{
@@ -14,7 +14,9 @@ int main()
 		engine.init();
 	}
 
+#ifdef _DEBUG
 	getchar();
+#endif
 
 	return EXIT_SUCCESS;
 }

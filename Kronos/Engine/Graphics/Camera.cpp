@@ -1,12 +1,27 @@
 #include "Camera.h"
 #include "Renderer.h"
 #include "../Application/Input.h"
+#include "../Application/Time.h"
+
+void Camera::updateDirVectors()
+{
+	// Forward direction
+	this->forwardDir = glm::normalize(this->forwardDir);
+
+	// Right direction
+	this->rightDir = glm::cross(this->forwardDir, glm::vec3(0.0f, 1.0f, 0.0f));
+	this->rightDir = glm::normalize(this->rightDir);
+
+	// Up direction
+	this->upDir = glm::cross(this->rightDir, this->forwardDir);
+	this->upDir = glm::normalize(this->upDir);
+}
 
 void Camera::updateMatrices()
 {
 	this->viewMatrix = glm::lookAt(
 		this->position,
-		glm::vec3(0.0f, 0.0f, 0.0f),
+		this->position + this->forwardDir,
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 	this->projectionMatrix = glm::perspective(
@@ -17,14 +32,21 @@ void Camera::updateMatrices()
 	);
 }
 
+void Camera::recalculate()
+{
+	this->updateDirVectors();
+	this->updateMatrices();
+}
+
 Camera::Camera(Renderer& renderer)
 	: renderer(renderer),
 	viewMatrix(glm::mat4(1.0f)),
 	projectionMatrix(glm::mat4(1.0f)),
 
-	position(2.0f, 2.0f, 2.0f)
+	position(2.0f, 2.0f, 2.0f),
+	forwardDir(-1.0f, -1.0f, -1.0f)
 {
-	this->updateMatrices();
+	this->recalculate();
 }
 
 Camera::~Camera()
@@ -33,10 +55,17 @@ Camera::~Camera()
 
 void Camera::update()
 {
-	float horizontalSpeed =
-		(Input::isKeyDown(GLFW_KEY_D) - Input::isKeyDown(GLFW_KEY_A));
+	float rightSpeed =
+		Input::isKeyDown(Keys::D) - Input::isKeyDown(Keys::A);
+	float forwardSpeed =
+		Input::isKeyDown(Keys::W) - Input::isKeyDown(Keys::S);
+	float upSpeed =
+		Input::isKeyDown(Keys::E) - Input::isKeyDown(Keys::Q);
 
-	this->position.x += horizontalSpeed * 0.01f;
+	this->position += 
+		(rightSpeed * this->rightDir +
+		forwardSpeed * this->forwardDir +
+		upSpeed * this->upDir) * this->MOVEMENT_SPEED * Time::getDT();
 
-	this->updateMatrices();
+	this->recalculate();
 }
