@@ -1,5 +1,6 @@
 #include "Camera.h"
 #include "Renderer.h"
+#include "../Application/Input.h"
 
 void Camera::updateMatrices()
 {
@@ -32,7 +33,10 @@ Camera::~Camera()
 
 void Camera::update()
 {
+	float horizontalSpeed =
+		(Input::isKeyDown(GLFW_KEY_D) - Input::isKeyDown(GLFW_KEY_A));
 
+	this->position.x += horizontalSpeed * 0.01f;
 
 	this->updateMatrices();
 }
