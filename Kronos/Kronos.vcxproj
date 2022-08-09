@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Graphics\Camera.cpp" />
     <ClCompile Include="Engine\Graphics\CommandBufferArray.cpp" />
     <ClCompile Include="Engine\Graphics\CommandPool.cpp" />
     <ClCompile Include="Engine\Graphics\CommandBuffer.cpp" />
@@ -94,8 +95,10 @@
     <ClCompile Include="Engine\Graphics\VertexBuffer.cpp" />
     <ClCompile Include="Engine\Graphics\QueueFamilies.cpp" />
     <ClCompile Include="Engine\Graphics\Swapchain.cpp" />
+    <ClCompile Include="Engine\SMath.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Graphics\Camera.h" />
     <ClInclude Include="Engine\Graphics\CommandBufferArray.h" />
     <ClInclude Include="Engine\Graphics\CommandPool.h" />
     <ClInclude Include="Engine\Graphics\CommandBuffer.h" />
@@ -109,6 +112,7 @@
     <ClInclude Include="Engine\Graphics\IndexBuffer.h" />
     <ClInclude Include="Engine\Graphics\QueueFamilies.h" />
     <ClInclude Include="Engine\Graphics\Swapchain.h" />
+    <ClInclude Include="Engine\SMath.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -12,15 +12,15 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<Vertex> vertices =
 {
-	{{ -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f}},
-	{{  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f}},
-	{{  0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f}},
-	{{ -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f}},
+	{{  0.5f,  0.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
+	{{ -0.5f,  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
+	{{ -0.5f,  0.0f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
+	{{  0.5f,  0.0f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
 
-	{{ -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f}},
-	{{  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f}},
-	{{  0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f}},
-	{{ -0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f}}
+	{{  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
+	{{ -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
+	{{ -0.5f, -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
+	{{  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
 };
 
 const std::vector<uint32_t> indices =
@@ -548,7 +548,7 @@ void Renderer::createGraphicsPipeline()
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //VK_CULL_MODE_NONE;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f;
@@ -802,7 +802,7 @@ void Renderer::createSyncObjects()
 	}
 }
 
-void Renderer::drawFrame()
+void Renderer::drawFrame(Camera& camera)
 {
 	// Wait, then reset fence
 	vkWaitForFences(this->device, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
@@ -829,7 +829,7 @@ void Renderer::drawFrame()
 		Log::error("Failed to acquire swapchain image.");
 	}
 
-	this->updateUniformBuffer(this->currentFrame);
+	this->updateUniformBuffer(this->currentFrame, camera);
 
 	// Only reset the fence if we are submitting work
 	vkResetFences(this->device, 1, &this->inFlightFences[this->currentFrame]);
@@ -896,7 +896,7 @@ void Renderer::drawFrame()
 	this->currentFrame = (this->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void Renderer::updateUniformBuffer(uint32_t currentImage)
+void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 {
 	// Delta time
 	static auto startTime = std::chrono::high_resolution_clock::now();
@@ -910,19 +910,10 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 	ubo.model = glm::rotate(
 		glm::mat4(1.0f),
 		time * glm::radians(90.0f),
-		glm::vec3(0.0f, 0.0f, 1.0f)
+		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
-	ubo.view = glm::lookAt(
-		glm::vec3(2.0f, 2.0f, 2.0f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-	ubo.proj = glm::perspective(
-		glm::radians(45.0f),
-		this->swapchain.getWidth() / (float) this->swapchain.getHeight(),
-		0.1f,
-		100.0f
-	);
+	ubo.view = camera.getViewMatrix();
+	ubo.proj = camera.getProjectionMatrix();
 
 	// Copy data to uniform buffer object
 	void* data;

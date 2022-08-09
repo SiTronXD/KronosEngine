@@ -10,6 +10,7 @@
 #include "CommandBufferArray.h"
 #include "QueueFamilies.h"
 #include "Swapchain.h"
+#include "Camera.h"
 
 struct UniformBufferObject
 {
@@ -76,7 +77,7 @@ private:
 	void createDescriptorSets();
 	void createSyncObjects();
 
-	void updateUniformBuffer(uint32_t currentImage);
+	void updateUniformBuffer(uint32_t currentImage, Camera& camera);
 
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
@@ -98,7 +99,7 @@ public:
 	void setWindow(Window& window);
 	void cleanup();
 
-	void drawFrame();
+	void drawFrame(Camera& camera);
 
 	// Vulkan
 	inline CommandPool& getCommandPool() { return this->commandPool; }
