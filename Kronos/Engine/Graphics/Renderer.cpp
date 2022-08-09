@@ -39,7 +39,8 @@ const std::vector<const char*> validationLayers =
 
 const std::vector<const char*> deviceExtensions =
 {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	VK_KHR_MAINTENANCE1_EXTENSION_NAME // Negative viewport height
 };
 
 #ifdef NDEBUG
@@ -192,7 +193,7 @@ void Renderer::createInstance()
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "No Engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_0;
+	appInfo.apiVersion = VK_API_VERSION_1_3;
 
 	// Instance create info
 	VkInstanceCreateInfo createInfo{};
@@ -521,20 +522,6 @@ void Renderer::createGraphicsPipeline()
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-	// Viewport
-	/*VkViewport viewport{};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float) swapChainExtent.width;
-	viewport.height = (float) swapChainExtent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	// Scissor
-	VkRect2D scissor{};
-	scissor.offset = { 0, 0 };
-	scissor.extent = swapChainExtent;*/
 
 	// Dynamic states (for dynamic viewport)
 	std::vector<VkDynamicState> dynamicStates =
@@ -934,9 +921,8 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 		glm::radians(45.0f),
 		this->swapchain.getWidth() / (float) this->swapchain.getHeight(),
 		0.1f,
-		10.0f
+		100.0f
 	);
-	ubo.proj[1][1] *= -1.0f;
 
 	// Copy data to uniform buffer object
 	void* data;
@@ -1115,11 +1101,12 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 	commandBuffer.bindPipeline(this->graphicsPipeline);
 
 	// Record dynamic viewport
+	float swapchainHeight = (float) this->swapchain.getHeight();
 	VkViewport viewport{};
 	viewport.x = 0.0f;
-	viewport.y = 0.0f;
+	viewport.y = swapchainHeight;
 	viewport.width = static_cast<float>(this->swapchain.getWidth());
-	viewport.height = static_cast<float>(this->swapchain.getHeight());
+	viewport.height = -swapchainHeight;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	commandBuffer.setViewport(viewport);
