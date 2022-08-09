@@ -1,22 +1,38 @@
 #include "Camera.h"
+#include "Renderer.h"
 
-Camera::Camera()
-	: view(glm::mat4(1.0f)),
-	proj(glm::mat4(1.0f))
+void Camera::updateMatrices()
 {
-	this->view = glm::lookAt(
-		glm::vec3(2.0f, 2.0f, 2.0f),
+	this->viewMatrix = glm::lookAt(
+		this->position,
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
-	this->proj = glm::perspective(
+	this->projectionMatrix = glm::perspective(
 		glm::radians(45.0f),
-		16.0f / 9.0f,
+		this->renderer.getSwapchainAspectRatio(),
 		0.1f,
 		100.0f
 	);
 }
 
+Camera::Camera(Renderer& renderer)
+	: renderer(renderer),
+	viewMatrix(glm::mat4(1.0f)),
+	projectionMatrix(glm::mat4(1.0f)),
+
+	position(2.0f, 2.0f, 2.0f)
+{
+	this->updateMatrices();
+}
+
 Camera::~Camera()
 {
+}
+
+void Camera::update()
+{
+
+
+	this->updateMatrices();
 }

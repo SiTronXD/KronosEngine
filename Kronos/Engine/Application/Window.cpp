@@ -1,6 +1,7 @@
 #include "Window.h"
 
 #include "../Graphics/Renderer.h"
+#include "Input.h"
 
 static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -43,6 +44,9 @@ void Window::init(Renderer& renderer, int width, int height)
 	// Set pointer for resize callback
 	glfwSetWindowUserPointer(this->windowHandle, &renderer);
 	glfwSetFramebufferSizeCallback(this->windowHandle, framebufferResizeCallback);
+
+	// Set for keyboard callback
+	glfwSetKeyCallback(this->windowHandle, Input::glfwKeyCallback);
 }
 
 void Window::update()

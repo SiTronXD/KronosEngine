@@ -110,4 +110,6 @@ public:
 	inline VkSurfaceKHR& getSurface() { return this->surface; }
 	inline VkRenderPass& getRenderPass() { return this->renderPass; }
 	inline Window& getWindow() { return *this->window; }
+
+	inline float getSwapchainAspectRatio() { return (float) this->swapchain.getWidth() / this->swapchain.getHeight(); }
 };
