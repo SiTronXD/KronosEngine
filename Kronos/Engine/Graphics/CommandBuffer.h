@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "CommandPool.h"
+#include "Pipeline.h"
 
 class VertexBuffer;
 class IndexBuffer;
@@ -19,13 +20,13 @@ public:
 	void resetAndBegin();
 
 	void beginRenderPass(const VkRenderPassBeginInfo& renderPassInfo);
-	void bindPipeline(const VkPipeline& pipeline);
+	void bindPipeline(const Pipeline& pipeline);
 	void setViewport(const VkViewport& viewport);
 	void setScissor(const VkRect2D& scissor);
 	void bindVertexBuffer(VertexBuffer& vertexBuffer);
 	void bindIndexBuffer(IndexBuffer& indexBuffer);
 	void bindDescriptorSet(
-		const VkPipelineLayout& pipelineLayout,
+		const PipelineLayout& pipelineLayout,
 		const VkDescriptorSet& descriptorSet);
 	void drawIndexed(size_t numIndices);
 

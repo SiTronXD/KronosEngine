@@ -37,12 +37,12 @@ void CommandBuffer::beginRenderPass(const VkRenderPassBeginInfo& renderPassInfo)
 	);
 }
 
-void CommandBuffer::bindPipeline(const VkPipeline& pipeline)
+void CommandBuffer::bindPipeline(const Pipeline& pipeline)
 {
 	vkCmdBindPipeline(
 		this->commandBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipeline
+		pipeline.getPipeline()
 	);
 }
 
@@ -69,13 +69,13 @@ void CommandBuffer::bindIndexBuffer(IndexBuffer& indexBuffer)
 }
 
 void CommandBuffer::bindDescriptorSet(
-	const VkPipelineLayout& pipelineLayout, 
+	const PipelineLayout& pipelineLayout, 
 	const VkDescriptorSet& descriptorSet)
 {
 	vkCmdBindDescriptorSets(
 		this->commandBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipelineLayout,
+		pipelineLayout.getPipelineLayout(),
 		0,
 		1,
 		&descriptorSet,

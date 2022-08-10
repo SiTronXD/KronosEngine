@@ -11,6 +11,7 @@
 #include "QueueFamilies.h"
 #include "Swapchain.h"
 #include "Camera.h"
+#include "Pipeline.h"
 
 struct UniformBufferObject
 {
@@ -37,8 +38,9 @@ private:
 
 	VkRenderPass renderPass;
 	VkDescriptorSetLayout descriptorSetLayout;
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;
+
+	PipelineLayout graphicsPipelineLayout;
+	Pipeline graphicsPipeline;
 
 	CommandPool commandPool;
 	CommandBufferArray commandBuffers;
@@ -71,7 +73,6 @@ private:
 	void createLogicalDevice();
 	void createRenderPass();
 	void createDescriptorSetLayout();
-	void createGraphicsPipeline();
 	void createUniformBuffers();
 	void createDescriptorPool();
 	void createDescriptorSets();
