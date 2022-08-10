@@ -89,6 +89,7 @@
     <ClCompile Include="Engine\Dev\Log.cpp" />
     <ClCompile Include="Engine\Graphics\IndexBuffer.cpp" />
     <ClCompile Include="Engine\Application\Input.cpp" />
+    <ClCompile Include="Engine\Graphics\Shaders\FragmentShader.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Engine\Graphics\Renderer.cpp" />
     <ClCompile Include="Engine\Application\Window.cpp" />
@@ -98,6 +99,8 @@
     <ClCompile Include="Engine\Graphics\Swapchain.cpp" />
     <ClCompile Include="Engine\SMath.cpp" />
     <ClCompile Include="Engine\Application\Time.cpp" />
+    <ClCompile Include="Engine\Graphics\Shaders\VertexShader.cpp" />
+    <ClCompile Include="Engine\Graphics\Shaders\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Graphics\Camera.h" />
@@ -117,6 +120,9 @@
     <ClInclude Include="Engine\SMath.h" />
     <ClInclude Include="Engine\Application\Input.h" />
     <ClInclude Include="Engine\Application\Time.h" />
+    <ClInclude Include="Engine\Graphics\Shaders\VertexShader.h" />
+    <ClInclude Include="Engine\Graphics\Shaders\FragmentShader.h" />
+    <ClInclude Include="Engine\Graphics\Shaders\Shader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

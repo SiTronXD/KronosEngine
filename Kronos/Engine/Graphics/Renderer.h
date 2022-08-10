@@ -81,7 +81,6 @@ private:
 
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
-	VkShaderModule createShaderModule(const std::vector<char>& code);
 	std::vector<const char*> getRequiredExtensions();
 	bool checkValidationLayerSupport();
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);

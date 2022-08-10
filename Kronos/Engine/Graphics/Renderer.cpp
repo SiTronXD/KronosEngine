@@ -2,12 +2,12 @@
 
 #include <iostream>
 #include <string>
-#include <fstream>
 #include <set>
 #include <chrono>
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
+#include "Shaders/VertexShader.h"
+#include "Shaders/FragmentShader.h"
+
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<Vertex> vertices =
@@ -48,27 +48,6 @@ const bool enableValidationLayers = false;
 #else
 const bool enableValidationLayers = true;
 #endif
-
-static std::vector<char> readFile(const std::string& filename)
-{
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open())
-	{
-		Log::error("Failed to open file.");
-	}
-
-	// Allocate buffer from read position at the end of the file
-	size_t fileSize = (size_t)file.tellg();
-	std::vector<char> buffer(fileSize);
-
-	// Read all of the file from the beginning
-	file.seekg(0);
-	file.read(buffer.data(), fileSize);
-
-	file.close();
-	return buffer;
-}
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -477,33 +456,13 @@ void Renderer::createDescriptorSetLayout()
 
 void Renderer::createGraphicsPipeline()
 {
-	auto vertShaderCode = readFile("Resources/Shaders/vert.spv");
-	auto fragShaderCode = readFile("Resources/Shaders/frag.spv");
-
-	// Destroy after creating the pipeline
-	VkShaderModule vertShaderModule = this->createShaderModule(vertShaderCode);
-	VkShaderModule fragShaderModule = this->createShaderModule(fragShaderCode);
-
-	// Vertex shader stage create info
-	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = vertShaderModule;
-	vertShaderStageInfo.pName = "main";
-	vertShaderStageInfo.pSpecializationInfo = nullptr; // For shader constants
-
-	// Fragment shader stage create info
-	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = fragShaderModule;
-	fragShaderStageInfo.pName = "main";
-	fragShaderStageInfo.pSpecializationInfo = nullptr; // For shader constants
+	VertexShader vertShader(*this, "Resources/Shaders/vert.spv");
+	FragmentShader fragShader(*this, "Resources/Shaders/frag.spv");
 
 	VkPipelineShaderStageCreateInfo shaderStages[] =
 	{
-		vertShaderStageInfo,
-		fragShaderStageInfo
+		vertShader.getShaderStage(),
+		fragShader.getShaderStage()
 	};
 
 	// Vertex input
@@ -650,8 +609,9 @@ void Renderer::createGraphicsPipeline()
 		Log::error("Failed to create graphics pipeline.");
 	}
 
-	vkDestroyShaderModule(this->device, fragShaderModule, nullptr);
-	vkDestroyShaderModule(this->device, vertShaderModule, nullptr);
+	// Explicit cleanup
+	fragShader.cleanup();
+	vertShader.cleanup();
 }
 
 void Renderer::createUniformBuffers()
@@ -940,22 +900,6 @@ void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoE
 		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
-}
-
-VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
-{
-	VkShaderModuleCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.codeSize = code.size();
-	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(this->device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-	{
-		Log::error("Failed to create shader module.");
-	}
-
-	return shaderModule;
 }
 
 std::vector<const char*> Renderer::getRequiredExtensions()
