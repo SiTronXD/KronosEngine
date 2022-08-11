@@ -36,32 +36,32 @@ void Texture::createImage(
 	imageInfo.usage = usage;
 	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // Used only by the graphics queue
-	if (vkCreateImage(this->renderer.getDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS)
+	if (vkCreateImage(this->renderer.getVkDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS)
 	{
 		Log::error("Failed to create image.");
 	}
 
 	// Get memory requirements for image
 	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements(this->renderer.getDevice(), image, &memRequirements);
+	vkGetImageMemoryRequirements(this->renderer.getVkDevice(), image, &memRequirements);
 
 	// Allocate memory for image
 	VkMemoryAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = Buffer::findMemoryType(
-		this->renderer.getPhysicalDevice(),
+		this->renderer.getVkPhysicalDevice(),
 		memRequirements.memoryTypeBits,
 		properties
 	);
-	if (vkAllocateMemory(this->renderer.getDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
+	if (vkAllocateMemory(this->renderer.getVkDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
 	{
 		Log::error("Failed to allocate image memory.");
 	}
 
 	// Bind memory to image
 	vkBindImageMemory(
-		this->renderer.getDevice(),
+		this->renderer.getVkDevice(),
 		image,
 		imageMemory,
 		0
@@ -233,8 +233,8 @@ bool Texture::createTextureImage(const std::string& filePath)
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	Buffer::createBuffer(
-		this->renderer.getPhysicalDevice(),
-		this->renderer.getDevice(),
+		this->renderer.getVkPhysicalDevice(),
+		this->renderer.getVkDevice(),
 		imageSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -244,9 +244,9 @@ bool Texture::createTextureImage(const std::string& filePath)
 
 	// Copy data to staging buffer
 	void* data;
-	vkMapMemory(this->renderer.getDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
+	vkMapMemory(this->renderer.getVkDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
 	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	vkUnmapMemory(this->renderer.getDevice(), stagingBufferMemory);
+	vkUnmapMemory(this->renderer.getVkDevice(), stagingBufferMemory);
 
 	// Free pixel array
 	stbi_image_free(pixels);
@@ -291,8 +291,8 @@ bool Texture::createTextureImage(const std::string& filePath)
 	);
 
 	// Deallocate staging buffer
-	vkDestroyBuffer(this->renderer.getDevice(), stagingBuffer, nullptr);
-	vkFreeMemory(this->renderer.getDevice(), stagingBufferMemory, nullptr);
+	vkDestroyBuffer(this->renderer.getVkDevice(), stagingBuffer, nullptr);
+	vkFreeMemory(this->renderer.getVkDevice(), stagingBufferMemory, nullptr);
 
 	return true;
 }
@@ -300,7 +300,7 @@ bool Texture::createTextureImage(const std::string& filePath)
 bool Texture::createTextureImageView()
 {
 	this->imageView = Texture::createImageView(
-		this->renderer.getDevice(),
+		this->renderer.getVkDevice(),
 		this->image,
 		VK_FORMAT_R8G8B8A8_SRGB,
 		VK_IMAGE_ASPECT_COLOR_BIT
@@ -313,7 +313,7 @@ bool Texture::createTextureSampler()
 {
 	// Get physical device properties
 	VkPhysicalDeviceProperties properties{};
-	vkGetPhysicalDeviceProperties(this->renderer.getPhysicalDevice(), &properties);
+	vkGetPhysicalDeviceProperties(this->renderer.getVkPhysicalDevice(), &properties);
 
 	// Sampler create info
 	VkSamplerCreateInfo samplerInfo{};
@@ -336,7 +336,7 @@ bool Texture::createTextureSampler()
 
 	// Create sampler
 	if (vkCreateSampler(
-		this->renderer.getDevice(), 
+		this->renderer.getVkDevice(),
 		&samplerInfo, 
 		nullptr, 
 		&this->sampler) != VK_SUCCESS)
@@ -375,7 +375,7 @@ bool Texture::createFromFile(const std::string& filePath)
 bool Texture::createAsDepthTexture(uint32_t width, uint32_t height)
 {
 	// Get depth format
-	VkFormat depthFormat = Texture::findDepthFormat(this->renderer.getPhysicalDevice());
+	VkFormat depthFormat = Texture::findDepthFormat(this->renderer.getVkPhysicalDevice());
 
 	// Create depth image
 	this->createImage(
@@ -391,7 +391,7 @@ bool Texture::createAsDepthTexture(uint32_t width, uint32_t height)
 
 	// Create depth image view
 	this->imageView = Texture::createImageView(
-		this->renderer.getDevice(),
+		this->renderer.getVkDevice(),
 		this->image,
 		depthFormat,
 		VK_IMAGE_ASPECT_DEPTH_BIT
@@ -411,10 +411,10 @@ bool Texture::createAsDepthTexture(uint32_t width, uint32_t height)
 
 void Texture::cleanup()
 {
-	vkDestroySampler(this->renderer.getDevice(), this->sampler, nullptr);
-	vkDestroyImageView(this->renderer.getDevice(), this->imageView, nullptr);
-	vkFreeMemory(this->renderer.getDevice(), this->imageMemory, nullptr);
-	vkDestroyImage(this->renderer.getDevice(), this->image, nullptr);
+	vkDestroySampler(this->renderer.getVkDevice(), this->sampler, nullptr);
+	vkDestroyImageView(this->renderer.getVkDevice(), this->imageView, nullptr);
+	vkFreeMemory(this->renderer.getVkDevice(), this->imageMemory, nullptr);
+	vkDestroyImage(this->renderer.getVkDevice(), this->image, nullptr);
 }
 
 VkFormat Texture::findSupportedFormat(

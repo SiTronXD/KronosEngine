@@ -1,6 +1,6 @@
 #include "PipelineLayout.h"
 
-#include "Renderer.h"
+#include "../Renderer.h"
 
 PipelineLayout::PipelineLayout(Renderer& renderer)
 	: renderer(renderer),
@@ -12,17 +12,17 @@ PipelineLayout::~PipelineLayout()
 {
 }
 
-void PipelineLayout::createPipelineLayout(const VkDescriptorSetLayout& descriptorSetLayout)
+void PipelineLayout::createPipelineLayout(const DescriptorSetLayout& descriptorSetLayout)
 {
 	// Pipeline layout (uniforms and push values)
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout.getVkDescriptorSetLayout();
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 	pipelineLayoutInfo.pPushConstantRanges = nullptr;
 	if (vkCreatePipelineLayout(
-		this->renderer.getDevice(),
+		this->renderer.getVkDevice(),
 		&pipelineLayoutInfo,
 		nullptr,
 		&this->pipelineLayout) != VK_SUCCESS)
@@ -33,5 +33,5 @@ void PipelineLayout::createPipelineLayout(const VkDescriptorSetLayout& descripto
 
 void PipelineLayout::cleanup()
 {
-	vkDestroyPipelineLayout(this->renderer.getDevice(), this->pipelineLayout, nullptr);
+	vkDestroyPipelineLayout(this->renderer.getVkDevice(), this->pipelineLayout, nullptr);
 }

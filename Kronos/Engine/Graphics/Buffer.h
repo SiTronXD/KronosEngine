@@ -42,6 +42,6 @@ public:
 
 	void cleanup();
 
-	inline VkBuffer& getBuffer() { return this->buffer; }
-	inline VkDeviceMemory& getBufferMemory() { return this->bufferMemory; }
+	inline VkBuffer& getVkBuffer() { return this->buffer; }
+	inline VkDeviceMemory& getVkBufferMemory() { return this->bufferMemory; }
 };

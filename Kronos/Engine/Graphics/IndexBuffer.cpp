@@ -16,9 +16,9 @@ void IndexBuffer::createIndexBuffer(const std::vector<uint32_t>& indices)
 	// Resusable references
 	Renderer& renderer = Buffer::getRenderer();
 	VkPhysicalDevice& physicalDevice =
-		renderer.getPhysicalDevice();
+		renderer.getVkPhysicalDevice();
 	VkDevice& device =
-		renderer.getDevice();
+		renderer.getVkDevice();
 
 	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -48,12 +48,12 @@ void IndexBuffer::createIndexBuffer(const std::vector<uint32_t>& indices)
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		Buffer::getBuffer(),
-		Buffer::getBufferMemory()
+		Buffer::getVkBuffer(),
+		Buffer::getVkBufferMemory()
 	);
 
 	// Copy from staging buffer to real buffer
-	Buffer::copyBuffer(renderer, stagingBuffer, Buffer::getBuffer(), bufferSize);
+	Buffer::copyBuffer(renderer, stagingBuffer, Buffer::getVkBuffer(), bufferSize);
 
 	// Deallocate staging buffer
 	vkDestroyBuffer(device, stagingBuffer, nullptr);

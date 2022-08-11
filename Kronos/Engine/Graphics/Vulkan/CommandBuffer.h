@@ -34,7 +34,7 @@ public:
 
 	void setCommandBuffer(const VkCommandBuffer& commandBuffer);
 
-	inline VkCommandBuffer& getCommandBuffer() { return this->commandBuffer; }
+	inline VkCommandBuffer& getVkCommandBuffer() { return this->commandBuffer; }
 
 
 	static VkCommandBuffer beginSingleTimeCommands(Renderer& renderer);

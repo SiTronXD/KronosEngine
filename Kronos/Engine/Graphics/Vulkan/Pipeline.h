@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PipelineLayout.h"
+#include "RenderPass.h"
 
 class Pipeline
 {
@@ -15,9 +16,9 @@ public:
 
 	void createGraphicsPipeline(
 		PipelineLayout& pipelineLayout,
-		const VkRenderPass& renderPass);
+		const RenderPass& renderPass);
 
 	void cleanup();
 
-	inline const VkPipeline& getPipeline() const { return this->pipeline; }
+	inline const VkPipeline& getVkPipeline() const { return this->pipeline; }
 };

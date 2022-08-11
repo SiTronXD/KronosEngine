@@ -32,7 +32,11 @@ VkShaderModule Shader::createShaderModule(const std::vector<char>& code)
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(this->renderer.getDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+	if (vkCreateShaderModule(
+		this->renderer.getVkDevice(), 
+		&createInfo, 
+		nullptr, 
+		&shaderModule) != VK_SUCCESS)
 	{
 		Log::error("Failed to create shader module.");
 	}
@@ -65,5 +69,5 @@ void Shader::loadAndCreateShaderModule(const std::string& filePath)
 
 void Shader::cleanup()
 {
-	vkDestroyShaderModule(this->renderer.getDevice(), this->shaderModule, nullptr);
+	vkDestroyShaderModule(this->renderer.getVkDevice(), this->shaderModule, nullptr);
 }

@@ -36,7 +36,7 @@ public:
 		VkSurfaceKHR surface,
 		VkPhysicalDevice device);
 
-	inline VkQueue& getGraphicsQueue() { return this->graphicsQueue; }
-	inline VkQueue& getPresentQueue() { return this->presentQueue; }
+	inline VkQueue& getVkGraphicsQueue() { return this->graphicsQueue; }
+	inline VkQueue& getVkPresentQueue() { return this->presentQueue; }
 	inline QueueFamilyIndices& getIndices() { return this->indices; }
 };

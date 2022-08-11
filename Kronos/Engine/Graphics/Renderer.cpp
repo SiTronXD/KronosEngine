@@ -90,10 +90,8 @@ void Renderer::initVulkan()
 	this->createLogicalDevice();
 	
 	this->swapchain.createSwapchain();
-
-	this->createRenderPass();
-	this->createDescriptorSetLayout();
-
+	this->renderPass.createRenderPass();
+	this->descriptorSetLayout.createDescriptorSetLayout();
 	this->graphicsPipelineLayout.createPipelineLayout(this->descriptorSetLayout);
 	this->graphicsPipeline.createGraphicsPipeline(
 		this->graphicsPipelineLayout,
@@ -102,7 +100,6 @@ void Renderer::initVulkan()
 
 	this->commandPool.create();
 	this->commandBuffers.createCommandBuffers(MAX_FRAMES_IN_FLIGHT);
-
 	this->swapchain.createFramebuffers();
 
 	// Shader resources
@@ -147,8 +144,8 @@ void Renderer::cleanup()
 	this->commandPool.cleanup();
 	this->graphicsPipeline.cleanup();
 	this->graphicsPipelineLayout.cleanup();
-	vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
-	vkDestroyRenderPass(this->device, this->renderPass, nullptr);
+	this->descriptorSetLayout.cleanup();
+	this->renderPass.cleanup();
 	vkDestroyDevice(this->device, nullptr);
 
 	if (enableValidationLayers)
@@ -345,117 +342,6 @@ void Renderer::createLogicalDevice()
 	this->queueFamilies.extractQueueHandles(this->device);
 }
 
-void Renderer::createRenderPass()
-{
-	// Color attachment
-	VkAttachmentDescription colorAttachment{};
-	colorAttachment.format = this->swapchain.getFormat();
-	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	VkAttachmentReference colorAttachmentRef{};
-	colorAttachmentRef.attachment = 0;
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Layout DURING subpass
-
-	// Depth attachment
-	VkAttachmentDescription depthAttachment{};
-	depthAttachment.format = Texture::findDepthFormat(this->physicalDevice);
-	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; // Don't store after drawing is done
-	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentReference depthAttachmentRef{};
-	depthAttachmentRef.attachment = 1;
-	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // Layout DURING subpass
-
-	// Subpass
-	VkSubpassDescription subpass{};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachmentRef;
-	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-	// Subpass dependency
-	VkSubpassDependency dependency{};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-	// Render pass
-	std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
-	VkRenderPassCreateInfo renderPassInfo{};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	renderPassInfo.pAttachments = attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
-	if (vkCreateRenderPass(
-		this->device,
-		&renderPassInfo,
-		nullptr,
-		&this->renderPass) != VK_SUCCESS)
-	{
-		Log::error("Failed to create render pass.");
-	}
-}
-
-void Renderer::createDescriptorSetLayout()
-{
-	// Uniform buffer object layout binding
-	VkDescriptorSetLayoutBinding uboLayoutBinding{};
-	uboLayoutBinding.binding = 0;
-	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	uboLayoutBinding.pImmutableSamplers = nullptr;
-
-	// Combined image sampler layout binding
-	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-	samplerLayoutBinding.binding = 1;
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.descriptorCount = 1;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
-
-	// Descriptor set layout info, which contains all layout bindings
-	std::array<VkDescriptorSetLayoutBinding, 2> bindings =
-	{
-		uboLayoutBinding,
-		samplerLayoutBinding
-	};
-	VkDescriptorSetLayoutCreateInfo layoutInfo{};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-	layoutInfo.pBindings = bindings.data();
-
-	// Create descriptor set layout
-	if (vkCreateDescriptorSetLayout(
-		this->device,
-		&layoutInfo,
-		nullptr,
-		&this->descriptorSetLayout))
-	{
-		Log::error("Failed to create descriptor set layout.");
-	}
-}
-
 void Renderer::createUniformBuffers()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -510,7 +396,7 @@ void Renderer::createDescriptorSets()
 	// Allocate descriptor sets
 	std::vector<VkDescriptorSetLayout> layouts(
 		MAX_FRAMES_IN_FLIGHT,
-		this->descriptorSetLayout
+		this->descriptorSetLayout.getVkDescriptorSetLayout()
 	);
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -534,8 +420,8 @@ void Renderer::createDescriptorSets()
 		// Descriptor image info
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = this->texture.getImageView();
-		imageInfo.sampler = this->texture.getSampler();
+		imageInfo.imageView = this->texture.getVkImageView();
+		imageInfo.sampler = this->texture.getVkSampler();
 
 		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
@@ -613,7 +499,7 @@ void Renderer::drawFrame(Camera& camera)
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(
 		this->device,
-		this->swapchain.getSwapchain(),
+		this->swapchain.getVkSwapchain(),
 		UINT64_MAX,
 		this->imageAvailableSemaphores[this->currentFrame],
 		VK_NULL_HANDLE,
@@ -649,7 +535,8 @@ void Renderer::drawFrame(Camera& camera)
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &this->commandBuffers.getCommandBuffer(this->currentFrame).getCommandBuffer();
+	submitInfo.pCommandBuffers = 
+		&this->commandBuffers.getVkCommandBuffer(this->currentFrame).getVkCommandBuffer();
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
@@ -657,7 +544,7 @@ void Renderer::drawFrame(Camera& camera)
 
 	// Submit command buffer
 	if (vkQueueSubmit(
-		this->queueFamilies.getGraphicsQueue(),
+		this->queueFamilies.getVkGraphicsQueue(),
 		1,
 		&submitInfo,
 		this->inFlightFences[this->currentFrame])
@@ -672,14 +559,14 @@ void Renderer::drawFrame(Camera& camera)
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
 
-	VkSwapchainKHR swapChains[] = { this->swapchain.getSwapchain() };
+	VkSwapchainKHR swapChains[] = { this->swapchain.getVkSwapchain() };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr;
 
 	// Present!
-	result = vkQueuePresentKHR(this->queueFamilies.getPresentQueue(), &presentInfo);
+	result = vkQueuePresentKHR(this->queueFamilies.getVkPresentQueue(), &presentInfo);
 
 	// Window resize?
 	if (result == VK_ERROR_OUT_OF_DATE_KHR ||
@@ -851,7 +738,7 @@ bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
 
 void Renderer::recordCommandBuffer(uint32_t imageIndex)
 {
-	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrame);
+	CommandBuffer& commandBuffer = this->commandBuffers.getVkCommandBuffer(this->currentFrame);
 
 	// Begin
 	commandBuffer.resetAndBegin();
@@ -859,10 +746,10 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 	// Begin render pass
 	VkRenderPassBeginInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = this->renderPass;
-	renderPassInfo.framebuffer = this->swapchain.getFramebuffer(imageIndex);
+	renderPassInfo.renderPass = this->renderPass.getVkRenderPass();
+	renderPassInfo.framebuffer = this->swapchain.getVkFramebuffer(imageIndex);
 	renderPassInfo.renderArea.offset = { 0, 0 };
-	renderPassInfo.renderArea.extent = this->swapchain.getExtent();
+	renderPassInfo.renderArea.extent = this->swapchain.getVkExtent();
 
 	// Clear values, for color and depth
 	std::array<VkClearValue, 2> clearValues{};
@@ -891,7 +778,7 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 	// Record dynamic scissor
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
-	scissor.extent = this->swapchain.getExtent();
+	scissor.extent = this->swapchain.getVkExtent();
 	commandBuffer.setScissor(scissor);
 
 	// Record binding vertex/index buffer
@@ -918,6 +805,8 @@ Renderer::Renderer()
 	vertexBuffer(*this),
 	indexBuffer(*this),
 
+	renderPass(*this),
+	descriptorSetLayout(*this),
 	graphicsPipelineLayout(*this),
 	graphicsPipeline(*this),
 	commandPool(*this),
@@ -926,10 +815,8 @@ Renderer::Renderer()
 
 	debugMessenger(VK_NULL_HANDLE),
 	descriptorPool(VK_NULL_HANDLE),
-	descriptorSetLayout(VK_NULL_HANDLE),
 	device(VK_NULL_HANDLE),
 	instance(VK_NULL_HANDLE),
-	renderPass(VK_NULL_HANDLE),
 	surface(VK_NULL_HANDLE)
 {
 }

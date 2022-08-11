@@ -114,6 +114,6 @@ void Buffer::copyBuffer(
 
 void Buffer::cleanup()
 {
-	vkDestroyBuffer(Buffer::getRenderer().getDevice(), this->buffer, nullptr);
-	vkFreeMemory(Buffer::getRenderer().getDevice(), this->bufferMemory, nullptr);
+	vkDestroyBuffer(Buffer::getRenderer().getVkDevice(), this->buffer, nullptr);
+	vkFreeMemory(Buffer::getRenderer().getVkDevice(), this->bufferMemory, nullptr);
 }

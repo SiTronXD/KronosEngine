@@ -22,6 +22,6 @@ public:
 
 	void cleanup();
 
-	inline CommandBuffer& getCommandBuffer(uint32_t commandBufferIndex) 
+	inline CommandBuffer& getVkCommandBuffer(uint32_t commandBufferIndex) 
 		{ return *this->commandBuffers[commandBufferIndex]; }
 };

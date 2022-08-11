@@ -4,14 +4,16 @@
 
 #include "../Dev/Log.h"
 #include "../Application/Window.h"
+#include "Vulkan/CommandBufferArray.h"
+#include "Vulkan/QueueFamilies.h"
+#include "Vulkan/Pipeline.h"
+#include "Vulkan/DescriptorSetLayout.h"
+#include "Vulkan/RenderPass.h"
 #include "Texture.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
-#include "CommandBufferArray.h"
-#include "QueueFamilies.h"
 #include "Swapchain.h"
 #include "Camera.h"
-#include "Pipeline.h"
 
 struct UniformBufferObject
 {
@@ -33,12 +35,10 @@ private:
 	VkDevice device;
 
 	QueueFamilies queueFamilies;
-
 	Swapchain swapchain;
 
-	VkRenderPass renderPass;
-	VkDescriptorSetLayout descriptorSetLayout;
-
+	RenderPass renderPass;
+	DescriptorSetLayout descriptorSetLayout;
 	PipelineLayout graphicsPipelineLayout;
 	Pipeline graphicsPipeline;
 
@@ -71,8 +71,6 @@ private:
 	void createSurface();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
-	void createRenderPass();
-	void createDescriptorSetLayout();
 	void createUniformBuffers();
 	void createDescriptorPool();
 	void createDescriptorSets();
@@ -104,12 +102,14 @@ public:
 	// Vulkan
 	inline CommandPool& getCommandPool() { return this->commandPool; }
 	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
-
-	inline VkPhysicalDevice& getPhysicalDevice() { return this->physicalDevice; }
-	inline VkDevice& getDevice() { return this->device; }
-	inline VkSurfaceKHR& getSurface() { return this->surface; }
-	inline VkRenderPass& getRenderPass() { return this->renderPass; }
+	inline RenderPass& getRenderPass() { return this->renderPass; }
+	inline Swapchain& getSwapchain() { return this->swapchain; }
 	inline Window& getWindow() { return *this->window; }
 
-	inline float getSwapchainAspectRatio() { return (float) this->swapchain.getWidth() / this->swapchain.getHeight(); }
+	inline VkPhysicalDevice& getVkPhysicalDevice() { return this->physicalDevice; }
+	inline VkDevice& getVkDevice() { return this->device; }
+	inline VkSurfaceKHR& getVkSurface() { return this->surface; }
+
+	inline float getSwapchainAspectRatio() 
+		{ return (float) this->swapchain.getWidth() / this->swapchain.getHeight(); }
 };

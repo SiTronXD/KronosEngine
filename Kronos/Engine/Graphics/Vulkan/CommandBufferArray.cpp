@@ -1,6 +1,6 @@
 #include "CommandBufferArray.h"
 
-#include "Renderer.h"
+#include "../Renderer.h"
 
 CommandBufferArray::CommandBufferArray(Renderer& renderer, CommandPool& commandPool)
 	: renderer(renderer), commandPool(commandPool)
@@ -20,11 +20,11 @@ void CommandBufferArray::createCommandBuffers(size_t numCommandBuffers)
 	// Allocate command buffer from command pool
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = this->commandPool.getCommandPool();
+	allocInfo.commandPool = this->commandPool.getVkCommandPool();
 	allocInfo.commandBufferCount = (uint32_t) numCommandBuffers;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	if (vkAllocateCommandBuffers(
-		this->renderer.getDevice(),
+		this->renderer.getVkDevice(),
 		&allocInfo,
 		this->commandBufferData.data()) != VK_SUCCESS)
 	{

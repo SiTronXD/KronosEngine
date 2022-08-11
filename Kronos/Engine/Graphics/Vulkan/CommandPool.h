@@ -18,5 +18,5 @@ public:
 	void create();
 	void cleanup();
 
-	inline VkCommandPool& getCommandPool() { return this->commandPool; }
+	inline VkCommandPool& getVkCommandPool() { return this->commandPool; }
 };

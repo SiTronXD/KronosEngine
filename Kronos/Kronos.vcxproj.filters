@@ -42,16 +42,16 @@
     <ClCompile Include="Engine\Graphics\IndexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Graphics\CommandBuffer.cpp">
+    <ClCompile Include="Engine\Graphics\Vulkan\CommandBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Graphics\CommandPool.cpp">
+    <ClCompile Include="Engine\Graphics\Vulkan\CommandPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Graphics\CommandBufferArray.cpp">
+    <ClCompile Include="Engine\Graphics\Vulkan\CommandBufferArray.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Graphics\QueueFamilies.cpp">
+    <ClCompile Include="Engine\Graphics\Vulkan\QueueFamilies.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Graphics\Swapchain.cpp">
@@ -78,10 +78,16 @@
     <ClCompile Include="Engine\Graphics\Shaders\Shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Graphics\Pipeline.cpp">
+    <ClCompile Include="Engine\Graphics\Vulkan\Pipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Graphics\PipelineLayout.cpp">
+    <ClCompile Include="Engine\Graphics\Vulkan\PipelineLayout.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSetLayout.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Graphics\Vulkan\RenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -110,16 +116,16 @@
     <ClInclude Include="Engine\Graphics\IndexBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Graphics\CommandBuffer.h">
+    <ClInclude Include="Engine\Graphics\Vulkan\CommandBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Graphics\CommandPool.h">
+    <ClInclude Include="Engine\Graphics\Vulkan\CommandPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Graphics\CommandBufferArray.h">
+    <ClInclude Include="Engine\Graphics\Vulkan\CommandBufferArray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Graphics\QueueFamilies.h">
+    <ClInclude Include="Engine\Graphics\Vulkan\QueueFamilies.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Graphics\Swapchain.h">
@@ -146,10 +152,16 @@
     <ClInclude Include="Engine\Graphics\Shaders\Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Graphics\Pipeline.h">
+    <ClInclude Include="Engine\Graphics\Vulkan\Pipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Graphics\PipelineLayout.h">
+    <ClInclude Include="Engine\Graphics\Vulkan\PipelineLayout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSetLayout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\Vulkan\RenderPass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

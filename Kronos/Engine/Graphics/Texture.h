@@ -64,8 +64,8 @@ public:
 		VkImageAspectFlags aspectFlags
 	);
 
-	inline VkImage& getImage() { return this->image; }
-	inline VkDeviceMemory& getImageMemory() { return this->imageMemory; }
-	inline VkImageView& getImageView() { return this->imageView; }
-	inline VkSampler& getSampler() { return this->sampler; }
+	inline VkImage& getVkImage() { return this->image; }
+	inline VkDeviceMemory& getVkImageMemory() { return this->imageMemory; }
+	inline VkImageView& getVkImageView() { return this->imageView; }
+	inline VkSampler& getVkSampler() { return this->sampler; }
 };

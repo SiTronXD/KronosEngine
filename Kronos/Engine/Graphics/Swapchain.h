@@ -52,10 +52,10 @@ public:
 		VkPhysicalDevice device,
 		SwapchainSupportDetails& output);
 
-	inline const VkSwapchainKHR& getSwapchain() { return this->swapchain; }
-	inline const VkFormat& getFormat() const { return this->imageFormat; }
-	inline const VkExtent2D& getExtent() const { return this->extent; }
-	inline const VkFramebuffer& getFramebuffer(const uint32_t& index) { return this->framebuffers[index]; }
+	inline const VkSwapchainKHR& getVkSwapchain() { return this->swapchain; }
+	inline const VkFormat& getVkFormat() const { return this->imageFormat; }
+	inline const VkExtent2D& getVkExtent() const { return this->extent; }
+	inline const VkFramebuffer& getVkFramebuffer(const uint32_t& index) { return this->framebuffers[index]; }
 	inline const uint32_t& getWidth() const { return this->extent.width; }
 	inline const uint32_t& getHeight() const { return this->extent.height; }
 };

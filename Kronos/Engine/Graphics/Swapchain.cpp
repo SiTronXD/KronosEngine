@@ -10,7 +10,7 @@ void Swapchain::createImageViews()
 	for (size_t i = 0; i < this->images.size(); ++i)
 	{
 		this->imageViews[i] = Texture::createImageView(
-			this->renderer.getDevice(),
+			this->renderer.getVkDevice(),
 			this->images[i],
 			this->imageFormat,
 			VK_IMAGE_ASPECT_COLOR_BIT
@@ -109,12 +109,12 @@ Swapchain::~Swapchain()
 void Swapchain::createSwapchain()
 {
 	// Reusable variables
-	VkSurfaceKHR& surface = this->renderer.getSurface();
-	VkDevice& device = this->renderer.getDevice();
+	VkSurfaceKHR& surface = this->renderer.getVkSurface();
+	VkDevice& device = this->renderer.getVkDevice();
 
 	// Swap chain support
 	SwapchainSupportDetails swapchainSupport{};
-	Swapchain::querySwapChainSupport(surface, this->renderer.getPhysicalDevice(), swapchainSupport);
+	Swapchain::querySwapChainSupport(surface, this->renderer.getVkPhysicalDevice(), swapchainSupport);
 
 	// Format, present mode and extent
 	VkSurfaceFormatKHR surfaceFormat{};
@@ -209,19 +209,19 @@ void Swapchain::createFramebuffers()
 		std::array<VkImageView, 2> attachments =
 		{
 			this->imageViews[i],
-			depthTexture.getImageView()
+			depthTexture.getVkImageView()
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = this->renderer.getRenderPass();
+		framebufferInfo.renderPass = this->renderer.getRenderPass().getVkRenderPass();
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebufferInfo.pAttachments = attachments.data();
 		framebufferInfo.width = this->getWidth();
 		framebufferInfo.height = this->getHeight();
 		framebufferInfo.layers = 1;
 		if (vkCreateFramebuffer(
-			this->renderer.getDevice(),
+			this->renderer.getVkDevice(),
 			&framebufferInfo,
 			nullptr,
 			&this->framebuffers[i]) != VK_SUCCESS)
@@ -245,7 +245,7 @@ void Swapchain::recreate()
 	}
 
 	// Wait for the GPU
-	vkDeviceWaitIdle(this->renderer.getDevice());
+	vkDeviceWaitIdle(this->renderer.getVkDevice());
 
 	// Cleanup
 	this->cleanup();
@@ -257,7 +257,7 @@ void Swapchain::recreate()
 
 void Swapchain::cleanup()
 {
-	VkDevice& device = this->renderer.getDevice();
+	VkDevice& device = this->renderer.getVkDevice();
 
 	this->depthTexture.cleanup();
 

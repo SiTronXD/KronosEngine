@@ -1,8 +1,8 @@
 #include "Pipeline.h"
 
-#include "Shaders/VertexShader.h"
-#include "Shaders/FragmentShader.h"
-#include "Renderer.h"
+#include "../Shaders/VertexShader.h"
+#include "../Shaders/FragmentShader.h"
+#include "../Renderer.h"
 
 Pipeline::Pipeline(Renderer& renderer)
 	: renderer(renderer),
@@ -17,7 +17,7 @@ Pipeline::~Pipeline()
 
 void Pipeline::createGraphicsPipeline(
 	PipelineLayout& pipelineLayout,
-	const VkRenderPass& renderPass)
+	const RenderPass& renderPass)
 {
 	VertexShader vertShader(this->renderer, "Resources/Shaders/vert.spv");
 	FragmentShader fragShader(this->renderer, "Resources/Shaders/frag.spv");
@@ -140,13 +140,13 @@ void Pipeline::createGraphicsPipeline(
 	pipelineInfo.pDepthStencilState = &depthStencilState;
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = &dynamicState;
-	pipelineInfo.layout = pipelineLayout.getPipelineLayout();
-	pipelineInfo.renderPass = renderPass;
+	pipelineInfo.layout = pipelineLayout.getVkPipelineLayout();
+	pipelineInfo.renderPass = renderPass.getVkRenderPass();
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
 	if (vkCreateGraphicsPipelines(
-		this->renderer.getDevice(),
+		this->renderer.getVkDevice(),
 		VK_NULL_HANDLE,
 		1,
 		&pipelineInfo,
@@ -163,5 +163,5 @@ void Pipeline::createGraphicsPipeline(
 
 void Pipeline::cleanup()
 {
-	vkDestroyPipeline(this->renderer.getDevice(), this->pipeline, nullptr);
+	vkDestroyPipeline(this->renderer.getVkDevice(), this->pipeline, nullptr);
 }

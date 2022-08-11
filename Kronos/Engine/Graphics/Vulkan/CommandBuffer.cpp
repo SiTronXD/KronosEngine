@@ -1,6 +1,6 @@
 #include "CommandBuffer.h"
 
-#include "Renderer.h"
+#include "../Renderer.h"
 
 CommandBuffer::CommandBuffer()
 	: commandBuffer(VK_NULL_HANDLE)
@@ -42,7 +42,7 @@ void CommandBuffer::bindPipeline(const Pipeline& pipeline)
 	vkCmdBindPipeline(
 		this->commandBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipeline.getPipeline()
+		pipeline.getVkPipeline()
 	);
 }
 
@@ -58,14 +58,14 @@ void CommandBuffer::setScissor(const VkRect2D& scissor)
 
 void CommandBuffer::bindVertexBuffer(VertexBuffer& vertexBuffer)
 {
-	VkBuffer vertexBuffers[] = { vertexBuffer.getBuffer() };
+	VkBuffer vertexBuffers[] = { vertexBuffer.getVkBuffer() };
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(this->commandBuffer, 0, 1, vertexBuffers, offsets);
 }
 
 void CommandBuffer::bindIndexBuffer(IndexBuffer& indexBuffer)
 {
-	vkCmdBindIndexBuffer(this->commandBuffer, indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(this->commandBuffer, indexBuffer.getVkBuffer(), 0, VK_INDEX_TYPE_UINT32);
 }
 
 void CommandBuffer::bindDescriptorSet(
@@ -75,7 +75,7 @@ void CommandBuffer::bindDescriptorSet(
 	vkCmdBindDescriptorSets(
 		this->commandBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipelineLayout.getPipelineLayout(),
+		pipelineLayout.getVkPipelineLayout(),
 		0,
 		1,
 		&descriptorSet,
@@ -115,9 +115,9 @@ VkCommandBuffer CommandBuffer::beginSingleTimeCommands(Renderer& renderer)
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = renderer.getCommandPool().getCommandPool();
+	allocInfo.commandPool = renderer.getCommandPool().getVkCommandPool();
 	allocInfo.commandBufferCount = 1;
-	vkAllocateCommandBuffers(renderer.getDevice(), &allocInfo, &commandBuffer);
+	vkAllocateCommandBuffers(renderer.getVkDevice(), &allocInfo, &commandBuffer);
 
 	// Begin recording command buffer
 	VkCommandBufferBeginInfo beginInfo{};
@@ -132,7 +132,7 @@ void CommandBuffer::endSingleTimeCommands(
 	Renderer& renderer,
 	VkCommandBuffer commandBuffer)
 {
-	VkQueue& queue = renderer.getQueueFamilies().getGraphicsQueue();
+	VkQueue& queue = renderer.getQueueFamilies().getVkGraphicsQueue();
 
 	// End recording command buffer
 	vkEndCommandBuffer(commandBuffer);
@@ -147,8 +147,8 @@ void CommandBuffer::endSingleTimeCommands(
 
 	// Deallocate temporary command buffer
 	vkFreeCommandBuffers(
-		renderer.getDevice(), 
-		renderer.getCommandPool().getCommandPool(), 
+		renderer.getVkDevice(),
+		renderer.getCommandPool().getVkCommandPool(), 
 		1, 
 		&commandBuffer
 	);
