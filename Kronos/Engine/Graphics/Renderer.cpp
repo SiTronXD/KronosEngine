@@ -88,8 +88,13 @@ void Renderer::initVulkan()
 	this->setupDebugMessenger();
 	this->createSurface();
 	this->pickPhysicalDevice();
-	this->createLogicalDevice();
-	
+
+	this->device.createDevice(
+		deviceExtensions, 
+		validationLayers, 
+		enableValidationLayers, 
+		this->queueFamilies.getIndices());
+	this->queueFamilies.extractQueueHandles(this->getVkDevice());
 	this->swapchain.createSwapchain();
 	this->renderPass.createRenderPass();
 	this->descriptorSetLayout.createDescriptorSetLayout();
@@ -125,7 +130,7 @@ void Renderer::initVulkan()
 void Renderer::cleanup()
 {
 	// Wait for device before cleanup
-	vkDeviceWaitIdle(this->device);
+	vkDeviceWaitIdle(this->getVkDevice());
 
 	this->swapchain.cleanup();
 
@@ -135,8 +140,8 @@ void Renderer::cleanup()
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		vkDestroyBuffer(this->device, this->uniformBuffers[i], nullptr);
-		vkFreeMemory(this->device, this->uniformBuffersMemory[i], nullptr);
+		vkDestroyBuffer(this->getVkDevice(), this->uniformBuffers[i], nullptr);
+		vkFreeMemory(this->getVkDevice(), this->uniformBuffersMemory[i], nullptr);
 	}
 
 	this->indexBuffer.cleanup();
@@ -144,9 +149,9 @@ void Renderer::cleanup()
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		vkDestroySemaphore(this->device, this->imageAvailableSemaphores[i], nullptr);
-		vkDestroySemaphore(this->device, this->renderFinishedSemaphores[i], nullptr);
-		vkDestroyFence(this->device, this->inFlightFences[i], nullptr);
+		vkDestroySemaphore(this->getVkDevice(), this->imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(this->getVkDevice(), this->renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(this->getVkDevice(), this->inFlightFences[i], nullptr);
 	}
 
 	this->commandPool.cleanup();
@@ -154,7 +159,7 @@ void Renderer::cleanup()
 	this->graphicsPipelineLayout.cleanup();
 	this->descriptorSetLayout.cleanup();
 	this->renderPass.cleanup();
-	vkDestroyDevice(this->device, nullptr);
+	this->device.cleanup();
 
 	if (enableValidationLayers)
 		DestroyDebugUtilsMessengerEXT(this->instance, debugMessenger, nullptr);
@@ -212,7 +217,7 @@ void Renderer::createInstance()
 	}
 
 	// Create instance
-	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+	if (vkCreateInstance(&createInfo, nullptr, &this->instance) != VK_SUCCESS)
 	{
 		Log::error("Failed to create instance.");
 	}
@@ -225,7 +230,7 @@ void Renderer::setupDebugMessenger()
 	VkDebugUtilsMessengerCreateInfoEXT createInfo;
 	populateDebugMessengerCreateInfo(createInfo);
 
-	if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
+	if (CreateDebugUtilsMessengerEXT(this->instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
 	{
 		Log::error("Failed to setup debug messenger.");
 	}
@@ -285,78 +290,6 @@ void Renderer::pickPhysicalDevice()
 	}
 }
 
-void Renderer::createLogicalDevice()
-{
-	// ---------- Queue families to be used ----------
-	QueueFamilyIndices& indices = this->queueFamilies.getIndices();
-
-	// Unique queue families to be used
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies =
-	{
-		indices.graphicsFamily.value(),
-		indices.presentFamily.value()
-	};
-
-	// Create queue create info structs
-	float queuePriority = 1.0f;
-	for (uint32_t queueFamily : uniqueQueueFamilies)
-	{
-		VkDeviceQueueCreateInfo queueCreateInfo{};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = queueFamily;
-		queueCreateInfo.queueCount = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
-
-		queueCreateInfos.push_back(queueCreateInfo);
-	}
-
-	// ---------- Device features ----------
-
-	// Device features
-	VkPhysicalDeviceFeatures deviceFeatures{};
-	deviceFeatures.samplerAnisotropy = VK_TRUE;
-
-	// ---------- Logical device ----------
-
-	// Logical device create info
-	VkDeviceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-
-	createInfo.pEnabledFeatures = &deviceFeatures;
-
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-	// Not used in newer versions of vulkan
-	if (enableValidationLayers)
-	{
-		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
-	}
-	else
-	{
-		createInfo.enabledLayerCount = 0;
-	}
-
-	// Create the logical device
-	if (vkCreateDevice(
-		this->physicalDevice,
-		&createInfo,
-		nullptr,
-		&device) != VK_SUCCESS)
-	{
-		Log::error("Failed to create logical device!");
-		return;
-	}
-
-	// Extract queue family handles from the device
-	this->queueFamilies.extractQueueHandles(this->device);
-}
-
 void Renderer::createUniformBuffers()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -368,7 +301,7 @@ void Renderer::createUniformBuffers()
 	{
 		Buffer::createBuffer(
 			this->physicalDevice,
-			this->device,
+			this->getVkDevice(),
 			bufferSize,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -394,17 +327,17 @@ void Renderer::createSyncObjects()
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
 		if (vkCreateSemaphore(
-			this->device,
+			this->getVkDevice(),
 			&semaphoreInfo,
 			nullptr,
 			&this->imageAvailableSemaphores[i]) != VK_SUCCESS ||
 			vkCreateSemaphore(
-				this->device,
+				this->getVkDevice(),
 				&semaphoreInfo,
 				nullptr,
 				&this->renderFinishedSemaphores[i]) != VK_SUCCESS ||
 			vkCreateFence(
-				this->device,
+				this->getVkDevice(),
 				&fenceInfo,
 				nullptr,
 				&this->inFlightFences[i]
@@ -418,12 +351,18 @@ void Renderer::createSyncObjects()
 void Renderer::drawFrame(Camera& camera)
 {
 	// Wait, then reset fence
-	vkWaitForFences(this->device, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
+	vkWaitForFences(
+		this->getVkDevice(), 
+		1, 
+		&this->inFlightFences[this->currentFrame], 
+		VK_TRUE, 
+		UINT64_MAX
+	);
 
 	// Get next image index from the swapchain
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(
-		this->device,
+		this->getVkDevice(),
 		this->swapchain.getVkSwapchain(),
 		UINT64_MAX,
 		this->imageAvailableSemaphores[this->currentFrame],
@@ -445,7 +384,7 @@ void Renderer::drawFrame(Camera& camera)
 	this->updateUniformBuffer(this->currentFrame, camera);
 
 	// Only reset the fence if we are submitting work
-	vkResetFences(this->device, 1, &this->inFlightFences[this->currentFrame]);
+	vkResetFences(this->getVkDevice(), 1, &this->inFlightFences[this->currentFrame]);
 
 	// Record command buffer
 	this->recordCommandBuffer(imageIndex);
@@ -532,7 +471,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 	// Copy data to uniform buffer object
 	void* data;
 	vkMapMemory(
-		this->device,
+		this->getVkDevice(),
 		this->uniformBuffersMemory[currentImage],
 		0,
 		sizeof(ubo),
@@ -540,7 +479,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 		&data
 	);
 	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(this->device, this->uniformBuffersMemory[currentImage]);
+	vkUnmapMemory(this->getVkDevice(), this->uniformBuffersMemory[currentImage]);
 }
 
 void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -628,6 +567,7 @@ Renderer::Renderer()
 	vertexBuffer(*this),
 	indexBuffer(*this),
 
+	device(*this),
 	renderPass(*this),
 	descriptorSetLayout(*this),
 	graphicsPipelineLayout(*this),
@@ -639,7 +579,6 @@ Renderer::Renderer()
 	swapchain(*this),
 
 	debugMessenger(VK_NULL_HANDLE),
-	device(VK_NULL_HANDLE),
 	instance(VK_NULL_HANDLE),
 	surface(VK_NULL_HANDLE)
 {

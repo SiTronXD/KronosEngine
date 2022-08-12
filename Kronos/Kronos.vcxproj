@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Graphics\Vulkan\Device.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSetArray.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSet.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DescriptorPool.cpp" />
@@ -111,6 +112,7 @@
     <ClCompile Include="Engine\Graphics\Vulkan\SupportChecker.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Graphics\Vulkan\Device.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSetArray.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSet.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorPool.h" />
