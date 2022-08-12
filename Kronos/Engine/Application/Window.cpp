@@ -78,6 +78,11 @@ void Window::getFramebufferSize(int& widthOutput, int& heightOutput)
 	glfwGetFramebufferSize(this->windowHandle, &widthOutput, &heightOutput);
 }
 
+void Window::getInstanceExtensions(const char**& extensions, uint32_t& extensionCount)
+{
+	extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
+}
+
 bool Window::isRunning() const
 {
 	return !glfwWindowShouldClose(this->windowHandle);

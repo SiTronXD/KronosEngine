@@ -105,6 +105,7 @@
     <ClCompile Include="Engine\Graphics\Shaders\Shader.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\PipelineLayout.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\RenderPass.cpp" />
+    <ClCompile Include="Engine\Graphics\Vulkan\SupportChecker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSetLayout.h" />
@@ -131,6 +132,7 @@
     <ClInclude Include="Engine\Graphics\Vulkan\Pipeline.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\PipelineLayout.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\RenderPass.h" />
+    <ClInclude Include="Engine\Graphics\Vulkan\SupportChecker.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -19,6 +19,7 @@ public:
 	void awaitEvents();
 
 	void getFramebufferSize(int& widthOutput, int& heightOutput);
+	void getInstanceExtensions(const char**& extensions, uint32_t& extensionCount);
 
 	bool isRunning() const;
 

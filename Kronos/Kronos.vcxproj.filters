@@ -90,6 +90,9 @@
     <ClCompile Include="Engine\Graphics\Vulkan\RenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Graphics\Vulkan\SupportChecker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Dev\Log.h">
@@ -162,6 +165,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Graphics\Vulkan\RenderPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\Vulkan\SupportChecker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

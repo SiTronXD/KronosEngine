@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "Vulkan/SupportChecker.h"
 
 #include <iostream>
 #include <string>
@@ -159,7 +160,7 @@ void Renderer::cleanup()
 
 void Renderer::createInstance()
 {
-	if (enableValidationLayers && !checkValidationLayerSupport())
+	if (enableValidationLayers && !SupportChecker::checkValidationLayerSupport(validationLayers))
 	{
 		Log::error("Validation layers requested are not available.");
 	}
@@ -179,7 +180,7 @@ void Renderer::createInstance()
 	createInfo.pApplicationInfo = &appInfo;
 
 	// Get and set extensions
-	auto extensions = getRequiredExtensions();
+	auto extensions = SupportChecker::getRequiredExtensions(*this->window, enableValidationLayers);
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -256,9 +257,16 @@ void Renderer::pickPhysicalDevice()
 	// Pick the first best found device
 	for (const auto& device : devices)
 	{
-		if (isDeviceSuitable(device))
+		QueueFamilyIndices indices{};
+
+		// Check support
+		if (SupportChecker::isDeviceSuitable(deviceExtensions, device, this->surface, indices))
 		{
 			this->physicalDevice = device;
+
+			// Set indices after finding a suitable device
+			this->queueFamilies.setIndices(indices);
+
 			break;
 		}
 	}
@@ -629,111 +637,6 @@ void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoE
 		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
-}
-
-std::vector<const char*> Renderer::getRequiredExtensions()
-{
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions;
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-	if (enableValidationLayers)
-	{
-		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	}
-
-	return extensions;
-}
-
-bool Renderer::checkValidationLayerSupport()
-{
-	uint32_t layerCount;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-	std::vector<VkLayerProperties> availableLayers(layerCount);
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-	for (const char* layerName : validationLayers)
-	{
-		bool layerFound = false;
-
-		for (const auto& layerProperties : availableLayers)
-		{
-			if (strcmp(layerName, layerProperties.layerName) == 0)
-			{
-				layerFound = true;
-				break;
-			}
-		}
-
-		if (!layerFound)
-			return false;
-	}
-
-	return true;
-}
-
-bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device)
-{
-	// Get available extensions
-	uint32_t extensionCount;
-	vkEnumerateDeviceExtensionProperties(
-		device, nullptr,
-		&extensionCount, nullptr
-	);
-	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-	vkEnumerateDeviceExtensionProperties(
-		device, nullptr,
-		&extensionCount, availableExtensions.data()
-	);
-
-	// Unique required extensions
-	std::set<std::string> requiredExtensions(
-		deviceExtensions.begin(), deviceExtensions.end()
-	);
-
-	// Remove found extensions
-	for (const auto& extension : availableExtensions)
-		requiredExtensions.erase(extension.extensionName);
-
-	// Have all required extensions been found and removed?
-	return requiredExtensions.empty();
-}
-
-bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
-{
-	// Find queue families
-	QueueFamilyIndices indices = QueueFamilies::findQueueFamilies(this->surface, device);
-
-	// Find required extension support
-	bool extensionsSupported = checkDeviceExtensionSupport(device);
-
-	// Swapchain with correct support
-	bool swapChainAdequate = false;
-	if (extensionsSupported)
-	{
-		SwapchainSupportDetails swapchainSupport{};
-		Swapchain::querySwapChainSupport(this->surface, device, swapchainSupport);
-		swapChainAdequate = !swapchainSupport.formats.empty() &&
-			!swapchainSupport.presentModes.empty();
-	}
-
-	// Sampler anisotropy support
-	VkPhysicalDeviceFeatures supportedFeatures;
-	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-
-	bool foundSuitableDevice = indices.isComplete() &&
-		extensionsSupported &&
-		swapChainAdequate &&
-		supportedFeatures.samplerAnisotropy;
-
-	// Set indices after finding a suitable device
-	if (foundSuitableDevice)
-		this->queueFamilies.setIndices(indices);
-
-	return foundSuitableDevice;
 }
 
 void Renderer::recordCommandBuffer(uint32_t imageIndex)

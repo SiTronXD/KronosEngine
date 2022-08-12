@@ -80,11 +80,6 @@ private:
 
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
-	std::vector<const char*> getRequiredExtensions();
-	bool checkValidationLayerSupport();
-	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-	bool isDeviceSuitable(VkPhysicalDevice device);
-
 	void recordCommandBuffer(uint32_t imageIndex);
 
 public:
