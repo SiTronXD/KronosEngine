@@ -109,8 +109,16 @@ void Renderer::initVulkan()
 	this->indexBuffer.createIndexBuffer(indices);
 	
 	this->createUniformBuffers();
-	this->createDescriptorPool();
-	this->createDescriptorSets();
+	
+	this->descriptorPool.createDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+	this->descriptorSets.createDescriptorSets(
+		this->descriptorSetLayout,
+		this->descriptorPool,
+		static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT),
+		
+		this->uniformBuffers,
+		this->texture);
+
 	this->createSyncObjects();
 }
 
@@ -123,8 +131,7 @@ void Renderer::cleanup()
 
 	this->texture.cleanup();
 
-	// Destroys descriptor sets allocated from it
-	vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
+	this->descriptorPool.cleanup();
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
@@ -371,96 +378,6 @@ void Renderer::createUniformBuffers()
 	}
 }
 
-void Renderer::createDescriptorPool()
-{
-	// Pool size
-	std::array<VkDescriptorPoolSize, 2> poolSizes{};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-
-	// Create descriptor pool
-	VkDescriptorPoolCreateInfo poolInfo{};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-	poolInfo.flags = 0;
-	if (vkCreateDescriptorPool(
-		this->device,
-		&poolInfo,
-		nullptr,
-		&this->descriptorPool) != VK_SUCCESS)
-	{
-		Log::error("Failed to create descriptor pool.");
-	}
-}
-
-void Renderer::createDescriptorSets()
-{
-	this->descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-
-	// Allocate descriptor sets
-	std::vector<VkDescriptorSetLayout> layouts(
-		MAX_FRAMES_IN_FLIGHT,
-		this->descriptorSetLayout.getVkDescriptorSetLayout()
-	);
-	VkDescriptorSetAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = this->descriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-	allocInfo.pSetLayouts = layouts.data();
-	if (vkAllocateDescriptorSets(this->device, &allocInfo, this->descriptorSets.data()) != VK_SUCCESS)
-	{
-		Log::error("Failed to allocate descriptor sets.");
-	}
-
-	// Populate descriptor sets
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-	{
-		// Descriptor buffer info
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = this->uniformBuffers[i];
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
-
-		// Descriptor image info
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = this->texture.getVkImageView();
-		imageInfo.sampler = this->texture.getVkSampler();
-
-		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-		// Write descriptor set for uniform buffer
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = this->descriptorSets[i];
-		descriptorWrites[0].dstBinding = 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-		// Write descriptor set for image sampler
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = this->descriptorSets[i];
-		descriptorWrites[1].dstBinding = 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &imageInfo;
-
-		vkUpdateDescriptorSets(
-			this->device,
-			static_cast<uint32_t>(descriptorWrites.size()),
-			descriptorWrites.data(),
-			0,
-			nullptr
-		);
-	}
-}
-
 void Renderer::createSyncObjects()
 {
 	this->imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -544,7 +461,7 @@ void Renderer::drawFrame(Camera& camera)
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = 
-		&this->commandBuffers.getVkCommandBuffer(this->currentFrame).getVkCommandBuffer();
+		&this->commandBuffers.getCommandBuffer(this->currentFrame).getVkCommandBuffer();
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
@@ -641,64 +558,67 @@ void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoE
 
 void Renderer::recordCommandBuffer(uint32_t imageIndex)
 {
-	CommandBuffer& commandBuffer = this->commandBuffers.getVkCommandBuffer(this->currentFrame);
+	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrame);
 
 	// Begin
 	commandBuffer.resetAndBegin();
 
-	// Begin render pass
-	VkRenderPassBeginInfo renderPassInfo{};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = this->renderPass.getVkRenderPass();
-	renderPassInfo.framebuffer = this->swapchain.getVkFramebuffer(imageIndex);
-	renderPassInfo.renderArea.offset = { 0, 0 };
-	renderPassInfo.renderArea.extent = this->swapchain.getVkExtent();
+		// Record dynamic viewport
+		float swapchainHeight = (float)this->swapchain.getHeight();
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = swapchainHeight;
+		viewport.width = static_cast<float>(this->swapchain.getWidth());
+		viewport.height = -swapchainHeight;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		commandBuffer.setViewport(viewport);
 
-	// Clear values, for color and depth
-	std::array<VkClearValue, 2> clearValues{};
-	clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-	clearValues[1].depthStencil = { 1.0f, 0 };
-	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-	renderPassInfo.pClearValues = clearValues.data();
+		// Record dynamic scissor
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = this->swapchain.getVkExtent();
+		commandBuffer.setScissor(scissor);
 
-	// Record beginning render pass
-	commandBuffer.beginRenderPass(renderPassInfo);
+		// Begin render pass
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = this->renderPass.getVkRenderPass();
+		renderPassInfo.framebuffer = this->swapchain.getVkFramebuffer(imageIndex);
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = this->swapchain.getVkExtent();
 
-	// Record binding graphics pipeline
-	commandBuffer.bindPipeline(this->graphicsPipeline);
+		// Clear values, for color and depth
+		std::array<VkClearValue, 2> clearValues{};
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
 
-	// Record dynamic viewport
-	float swapchainHeight = (float) this->swapchain.getHeight();
-	VkViewport viewport{};
-	viewport.x = 0.0f;
-	viewport.y = swapchainHeight;
-	viewport.width = static_cast<float>(this->swapchain.getWidth());
-	viewport.height = -swapchainHeight;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-	commandBuffer.setViewport(viewport);
+		// Record beginning render pass
+		commandBuffer.beginRenderPass(renderPassInfo);
 
-	// Record dynamic scissor
-	VkRect2D scissor{};
-	scissor.offset = { 0, 0 };
-	scissor.extent = this->swapchain.getVkExtent();
-	commandBuffer.setScissor(scissor);
+			// Record binding graphics pipeline
+			commandBuffer.bindPipeline(this->graphicsPipeline);
 
-	// Record binding vertex/index buffer
-	commandBuffer.bindVertexBuffer(this->vertexBuffer);
-	commandBuffer.bindIndexBuffer(this->indexBuffer);
+			// Record binding descriptor sets
+			commandBuffer.bindDescriptorSet(
+				this->graphicsPipelineLayout,
+				this->descriptorSets.getDescriptorSet(this->currentFrame)
+			);
 
-	// Record binding descriptor sets
-	commandBuffer.bindDescriptorSet(
-		this->graphicsPipelineLayout, 
-		this->descriptorSets[this->currentFrame]
-	);
+				// Record binding vertex/index buffer
+				commandBuffer.bindVertexBuffer(this->vertexBuffer);
+				commandBuffer.bindIndexBuffer(this->indexBuffer);
 
-	// Record draw!
-	commandBuffer.drawIndexed(indices.size());
+				// Record draw!
+				commandBuffer.drawIndexed(indices.size());
 
-	// End render pass and stop recording
-	commandBuffer.endPassAndRecording();
+		// End render pass
+		commandBuffer.endRenderPass();
+
+	// Stop recording
+	commandBuffer.end();
 }
 
 Renderer::Renderer()
@@ -714,10 +634,11 @@ Renderer::Renderer()
 	graphicsPipeline(*this),
 	commandPool(*this),
 	commandBuffers(*this, commandPool),
+	descriptorPool(*this),
+	descriptorSets(*this),
 	swapchain(*this),
 
 	debugMessenger(VK_NULL_HANDLE),
-	descriptorPool(VK_NULL_HANDLE),
 	device(VK_NULL_HANDLE),
 	instance(VK_NULL_HANDLE),
 	surface(VK_NULL_HANDLE)

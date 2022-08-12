@@ -15,7 +15,7 @@ CommandBufferArray::~CommandBufferArray()
 void CommandBufferArray::createCommandBuffers(size_t numCommandBuffers)
 {
 	this->commandBuffers.resize(numCommandBuffers);
-	this->commandBufferData.resize(numCommandBuffers);
+	std::vector<VkCommandBuffer> commandBufferData(numCommandBuffers);
 
 	// Allocate command buffer from command pool
 	VkCommandBufferAllocateInfo allocInfo{};
@@ -26,16 +26,16 @@ void CommandBufferArray::createCommandBuffers(size_t numCommandBuffers)
 	if (vkAllocateCommandBuffers(
 		this->renderer.getVkDevice(),
 		&allocInfo,
-		this->commandBufferData.data()) != VK_SUCCESS)
+		commandBufferData.data()) != VK_SUCCESS)
 	{
 		Log::error("Failed to allocate command buffers.");
 	}
 
-	// Set command buffer ptr in objects
-	for (size_t i = 0; i < this->commandBuffers.size(); ++i)
+	// Populate command buffers
+	for (size_t i = 0; i < commandBufferData.size(); ++i)
 	{
 		this->commandBuffers[i] = new CommandBuffer();
-		this->commandBuffers[i]->setCommandBuffer(this->commandBufferData[i]);
+		this->commandBuffers[i]->setVkCommandBuffer(commandBufferData[i]);
 	}
 }
 

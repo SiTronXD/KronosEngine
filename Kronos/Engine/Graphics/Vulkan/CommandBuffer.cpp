@@ -70,7 +70,7 @@ void CommandBuffer::bindIndexBuffer(IndexBuffer& indexBuffer)
 
 void CommandBuffer::bindDescriptorSet(
 	const PipelineLayout& pipelineLayout, 
-	const VkDescriptorSet& descriptorSet)
+	const DescriptorSet& descriptorSet)
 {
 	vkCmdBindDescriptorSets(
 		this->commandBuffer,
@@ -78,7 +78,7 @@ void CommandBuffer::bindDescriptorSet(
 		pipelineLayout.getVkPipelineLayout(),
 		0,
 		1,
-		&descriptorSet,
+		&descriptorSet.getVkDescriptorSet(),
 		0,
 		nullptr
 	);
@@ -90,19 +90,20 @@ void CommandBuffer::drawIndexed(size_t numIndices)
 	vkCmdDrawIndexed(this->commandBuffer, static_cast<uint32_t>(numIndices), 1, 0, 0, 0);
 }
 
-void CommandBuffer::endPassAndRecording()
+void CommandBuffer::endRenderPass()
 {
 	// Record ending render pass
 	vkCmdEndRenderPass(this->commandBuffer);
-
-	// Finish recording
-	if (vkEndCommandBuffer(this->commandBuffer) != VK_SUCCESS)
-	{
-		Log::error("Failed to record command buffer.");
-	}
 }
 
-void CommandBuffer::setCommandBuffer(const VkCommandBuffer& commandBuffer)
+void CommandBuffer::end()
+{
+	// Finish recording
+	if (vkEndCommandBuffer(this->commandBuffer) != VK_SUCCESS)
+		Log::error("Failed to record command buffer.");
+}
+
+void CommandBuffer::setVkCommandBuffer(const VkCommandBuffer& commandBuffer)
 {
 	this->commandBuffer = commandBuffer;
 }

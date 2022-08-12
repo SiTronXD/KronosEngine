@@ -80,6 +80,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSetArray.cpp" />
+    <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSet.cpp" />
+    <ClCompile Include="Engine\Graphics\Vulkan\DescriptorPool.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSetLayout.cpp" />
     <ClCompile Include="Engine\Graphics\Camera.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\CommandBufferArray.cpp" />
@@ -108,6 +111,9 @@
     <ClCompile Include="Engine\Graphics\Vulkan\SupportChecker.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSetArray.h" />
+    <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSet.h" />
+    <ClInclude Include="Engine\Graphics\Vulkan\DescriptorPool.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSetLayout.h" />
     <ClInclude Include="Engine\Graphics\Camera.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\CommandBufferArray.h" />

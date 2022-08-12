@@ -9,7 +9,6 @@ class CommandBufferArray
 {
 private:
 	std::vector<CommandBuffer*> commandBuffers;
-	std::vector<VkCommandBuffer> commandBufferData;
 
 	Renderer& renderer;
 	CommandPool& commandPool;
@@ -22,6 +21,6 @@ public:
 
 	void cleanup();
 
-	inline CommandBuffer& getVkCommandBuffer(uint32_t commandBufferIndex) 
+	inline CommandBuffer& getCommandBuffer(uint32_t commandBufferIndex) 
 		{ return *this->commandBuffers[commandBufferIndex]; }
 };

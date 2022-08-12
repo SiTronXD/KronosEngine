@@ -9,6 +9,8 @@
 #include "Vulkan/Pipeline.h"
 #include "Vulkan/DescriptorSetLayout.h"
 #include "Vulkan/RenderPass.h"
+#include "Vulkan/DescriptorPool.h"
+#include "Vulkan/DescriptorSetArray.h"
 #include "Texture.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -45,8 +47,8 @@ private:
 	CommandPool commandPool;
 	CommandBufferArray commandBuffers;
 
-	VkDescriptorPool descriptorPool;
-	std::vector<VkDescriptorSet> descriptorSets;
+	DescriptorPool descriptorPool;
+	DescriptorSetArray descriptorSets;
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -72,8 +74,6 @@ private:
 	void pickPhysicalDevice();
 	void createLogicalDevice();
 	void createUniformBuffers();
-	void createDescriptorPool();
-	void createDescriptorSets();
 	void createSyncObjects();
 
 	void updateUniformBuffer(uint32_t currentImage, Camera& camera);

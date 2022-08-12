@@ -4,6 +4,7 @@
 
 #include "CommandPool.h"
 #include "Pipeline.h"
+#include "DescriptorSet.h"
 
 class VertexBuffer;
 class IndexBuffer;
@@ -27,12 +28,13 @@ public:
 	void bindIndexBuffer(IndexBuffer& indexBuffer);
 	void bindDescriptorSet(
 		const PipelineLayout& pipelineLayout,
-		const VkDescriptorSet& descriptorSet);
+		const DescriptorSet& descriptorSet);
 	void drawIndexed(size_t numIndices);
 
-	void endPassAndRecording();
+	void endRenderPass();
+	void end();
 
-	void setCommandBuffer(const VkCommandBuffer& commandBuffer);
+	void setVkCommandBuffer(const VkCommandBuffer& commandBuffer);
 
 	inline VkCommandBuffer& getVkCommandBuffer() { return this->commandBuffer; }
 
