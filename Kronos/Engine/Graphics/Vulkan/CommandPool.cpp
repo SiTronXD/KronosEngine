@@ -13,7 +13,7 @@ CommandPool::~CommandPool()
 {
 }
 
-void CommandPool::create()
+void CommandPool::create(VkCommandPoolCreateFlags flags)
 {
 	QueueFamilyIndices& queueFamilyIndices =
 		this->renderer.getQueueFamilies().getIndices();
@@ -21,7 +21,7 @@ void CommandPool::create()
 	// Create command pool for graphics queue
 	VkCommandPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo.flags = flags;
 	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 	if (vkCreateCommandPool(
 		this->renderer.getVkDevice(),

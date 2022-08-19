@@ -116,7 +116,7 @@ VkCommandBuffer CommandBuffer::beginSingleTimeCommands(Renderer& renderer)
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = renderer.getCommandPool().getVkCommandPool();
+	allocInfo.commandPool = renderer.getSingleTimeCommandPool().getVkCommandPool();
 	allocInfo.commandBufferCount = 1;
 	vkAllocateCommandBuffers(renderer.getVkDevice(), &allocInfo, &commandBuffer);
 
@@ -149,7 +149,7 @@ void CommandBuffer::endSingleTimeCommands(
 	// Deallocate temporary command buffer
 	vkFreeCommandBuffers(
 		renderer.getVkDevice(),
-		renderer.getCommandPool().getVkCommandPool(), 
+		renderer.getSingleTimeCommandPool().getVkCommandPool(),
 		1, 
 		&commandBuffer
 	);

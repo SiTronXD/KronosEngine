@@ -15,7 +15,7 @@ public:
 	CommandPool(Renderer& renderer);
 	~CommandPool();
 
-	void create();
+	void create(VkCommandPoolCreateFlags flags);
 	void cleanup();
 
 	inline VkCommandPool& getVkCommandPool() { return this->commandPool; }

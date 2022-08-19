@@ -78,7 +78,8 @@ void Renderer::initVulkan()
 		this->renderPass
 	);
 
-	this->commandPool.create();
+	this->commandPool.create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	this->singleTimeCommandPool.create(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT);
 	this->commandBuffers.createCommandBuffers(MAX_FRAMES_IN_FLIGHT);
 	this->swapchain.createFramebuffers();
 
@@ -128,6 +129,7 @@ void Renderer::cleanup()
 		vkDestroyFence(this->getVkDevice(), this->inFlightFences[i], nullptr);
 	}
 
+	this->singleTimeCommandPool.cleanup();
 	this->commandPool.cleanup();
 	this->graphicsPipeline.cleanup();
 	this->graphicsPipelineLayout.cleanup();
@@ -413,6 +415,7 @@ Renderer::Renderer()
 	graphicsPipelineLayout(*this),
 	graphicsPipeline(*this),
 	commandPool(*this),
+	singleTimeCommandPool(*this),
 	commandBuffers(*this, commandPool),
 	descriptorPool(*this),
 	descriptorSets(*this),

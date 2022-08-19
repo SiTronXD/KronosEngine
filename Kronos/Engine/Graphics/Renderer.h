@@ -45,6 +45,7 @@ private:
 	Pipeline graphicsPipeline;
 
 	CommandPool commandPool;
+	CommandPool singleTimeCommandPool;
 	CommandBufferArray commandBuffers;
 
 	DescriptorPool descriptorPool;
@@ -94,6 +95,7 @@ public:
 
 	inline Surface& getSurface() { return this->surface; }
 	inline CommandPool& getCommandPool() { return this->commandPool; }
+	inline CommandPool& getSingleTimeCommandPool() { return this->singleTimeCommandPool; }
 	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
 	inline RenderPass& getRenderPass() { return this->renderPass; }
 	inline Swapchain& getSwapchain() { return this->swapchain; }
