@@ -10,6 +10,8 @@
 #include "Vulkan/RenderPass.h"
 #include "Vulkan/DescriptorPool.h"
 #include "Vulkan/DescriptorSetArray.h"
+#include "Vulkan/Instance.h"
+#include "Vulkan/DebugMessenger.h"
 #include "Vulkan/PhysicalDevice.h"
 #include "Vulkan/Device.h"
 #include "Texture.h"
@@ -28,8 +30,9 @@ struct UniformBufferObject
 class Renderer
 {
 private:
-	VkInstance instance;
-	VkDebugUtilsMessengerEXT debugMessenger;
+	Instance instance;
+	DebugMessenger debugMessenger;
+
 	VkSurfaceKHR surface;
 
 	PhysicalDevice physicalDevice;
@@ -58,23 +61,19 @@ private:
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
-	Texture texture;
-
 	Window* window;
 
 	uint32_t currentFrame = 0;
 
+	Texture texture;
+
 	void initVulkan();
 
-	void createInstance();
-	void setupDebugMessenger();
 	void createSurface();
 	void createUniformBuffers();
 	void createSyncObjects();
 
 	void updateUniformBuffer(uint32_t currentImage, Camera& camera);
-
-	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
 	void recordCommandBuffer(uint32_t imageIndex);
 
@@ -91,6 +90,7 @@ public:
 	void drawFrame(Camera& camera);
 
 	// Vulkan
+	inline VkInstance& getVkInstance() { return this->instance.getVkInstance(); }
 	inline VkPhysicalDevice& getVkPhysicalDevice() { return this->physicalDevice.getVkPhysicalDevice(); }
 	inline VkDevice& getVkDevice() { return this->device.getVkDevice(); }
 	inline VkSurfaceKHR& getVkSurface() { return this->surface; }

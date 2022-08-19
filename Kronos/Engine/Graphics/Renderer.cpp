@@ -47,49 +47,19 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-	VkDebugUtilsMessageTypeFlagsEXT messageType,
-	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData)
-{
-	std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
-
-	return VK_FALSE;
-}
-
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
-	const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-	const VkAllocationCallbacks* pAllocator,
-	VkDebugUtilsMessengerEXT* pDebugMessenger)
-{
-	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-
-	if (func != nullptr)
-		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-	else
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-}
-
-void DestroyDebugUtilsMessengerEXT(VkInstance instance,
-	VkDebugUtilsMessengerEXT debugMessenger,
-	const VkAllocationCallbacks* pAllocator)
-{
-	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr)
-	{
-		func(instance, debugMessenger, pAllocator);
-	}
-}
-
 void Renderer::initVulkan()
 {
-	this->createInstance();
-	this->setupDebugMessenger();
+	this->instance.createInstance(
+		enableValidationLayers, 
+		validationLayers, 
+		this->window
+	);
+	this->debugMessenger.createDebugMessenger(enableValidationLayers);
+
 	this->createSurface();
 
 	this->physicalDevice.pickPhysicalDevice(
-		this->instance, 
+		this->instance,
 		this->surface,
 		deviceExtensions, 
 		this->queueFamilies
@@ -166,86 +136,18 @@ void Renderer::cleanup()
 	this->descriptorSetLayout.cleanup();
 	this->renderPass.cleanup();
 	this->device.cleanup();
+	this->debugMessenger.cleanup();
 
-	if (enableValidationLayers)
-		DestroyDebugUtilsMessengerEXT(this->instance, debugMessenger, nullptr);
-
-	vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
+	vkDestroySurfaceKHR(this->getVkInstance(), this->surface, nullptr);
 
 	// Destroys both physical device and instance
-	vkDestroyInstance(this->instance, nullptr);
-}
-
-void Renderer::createInstance()
-{
-	if (enableValidationLayers && !SupportChecker::checkValidationLayerSupport(validationLayers))
-	{
-		Log::error("Validation layers requested are not available.");
-	}
-
-	// Application info
-	VkApplicationInfo appInfo{};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "Hello Triangle";
-	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = "No Engine";
-	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_3;
-
-	// Instance create info
-	VkInstanceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pApplicationInfo = &appInfo;
-
-	// Get and set extensions
-	auto extensions = SupportChecker::getRequiredExtensions(*this->window, enableValidationLayers);
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.ppEnabledExtensionNames = extensions.data();
-
-	// Validation layer debug info for specifically instance create/destroy
-	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-
-	// Validation layers
-	if (enableValidationLayers)
-	{
-		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
-
-		// Validation layer debug info for specifically instance create/destroy
-		populateDebugMessengerCreateInfo(debugCreateInfo);
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-	}
-	else
-	{
-		createInfo.enabledLayerCount = 0;
-
-		createInfo.pNext = nullptr;
-	}
-
-	// Create instance
-	if (vkCreateInstance(&createInfo, nullptr, &this->instance) != VK_SUCCESS)
-	{
-		Log::error("Failed to create instance.");
-	}
-}
-
-void Renderer::setupDebugMessenger()
-{
-	if (!enableValidationLayers) return;
-
-	VkDebugUtilsMessengerCreateInfoEXT createInfo;
-	populateDebugMessengerCreateInfo(createInfo);
-
-	if (CreateDebugUtilsMessengerEXT(this->instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
-	{
-		Log::error("Failed to setup debug messenger.");
-	}
+	this->instance.cleanup();
 }
 
 void Renderer::createSurface()
 {
 	if (glfwCreateWindowSurface(
-		this->instance,
+		this->getVkInstance(),
 		this->window->getWindowHandle(),
 		nullptr,
 		&this->surface) != VK_SUCCESS)
@@ -447,19 +349,6 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 	vkUnmapMemory(this->getVkDevice(), this->uniformBuffersMemory[currentImage]);
 }
 
-void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
-{
-	createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	createInfo.messageSeverity = /*VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |*/
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	createInfo.pfnUserCallback = debugCallback;
-}
-
 void Renderer::recordCommandBuffer(uint32_t imageIndex)
 {
 	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrame);
@@ -532,7 +421,7 @@ Renderer::Renderer()
 	vertexBuffer(*this),
 	indexBuffer(*this),
 
-	physicalDevice(*this),
+	debugMessenger(*this),
 	device(*this),
 	renderPass(*this),
 	descriptorSetLayout(*this),
@@ -544,8 +433,6 @@ Renderer::Renderer()
 	descriptorSets(*this),
 	swapchain(*this),
 
-	debugMessenger(VK_NULL_HANDLE),
-	instance(VK_NULL_HANDLE),
 	surface(VK_NULL_HANDLE)
 {
 }

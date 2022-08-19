@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Graphics\Vulkan\DebugMessenger.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Device.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSetArray.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSet.cpp" />
@@ -96,6 +97,7 @@
     <ClCompile Include="Engine\Application\Input.cpp" />
     <ClCompile Include="Engine\Graphics\Shaders\FragmentShader.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Pipeline.cpp" />
+    <ClCompile Include="Engine\Graphics\Vulkan\Instance.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Engine\Graphics\Renderer.cpp" />
     <ClCompile Include="Engine\Application\Window.cpp" />
@@ -113,6 +115,7 @@
     <ClCompile Include="Engine\Graphics\Vulkan\PhysicalDevice.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Graphics\Vulkan\DebugMessenger.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\Device.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSetArray.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSet.h" />
@@ -143,6 +146,7 @@
     <ClInclude Include="Engine\Graphics\Vulkan\RenderPass.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\SupportChecker.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\PhysicalDevice.h" />
+    <ClInclude Include="Engine\Graphics\Vulkan\Instance.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,11 +1,11 @@
 #include "PhysicalDevice.h"
 #include "SupportChecker.h"
+#include "Instance.h"
 
 #include "../Renderer.h"
 
-PhysicalDevice::PhysicalDevice(Renderer& renderer)
-	: renderer(renderer),
-	physicalDevice(VK_NULL_HANDLE)
+PhysicalDevice::PhysicalDevice()
+	: physicalDevice(VK_NULL_HANDLE)
 {
 }
 
@@ -14,14 +14,14 @@ PhysicalDevice::~PhysicalDevice()
 }
 
 void PhysicalDevice::pickPhysicalDevice(
-	VkInstance instance, 
+	Instance instance, 
 	VkSurfaceKHR surface, 
 	const std::vector<const char*>& deviceExtensions,
 	QueueFamilies& outputQueueFamilies)
 {
 	// Get device count
 	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+	vkEnumeratePhysicalDevices(instance.getVkInstance(), &deviceCount, nullptr);
 
 	// No devices found
 	if (deviceCount == 0)
@@ -32,7 +32,7 @@ void PhysicalDevice::pickPhysicalDevice(
 
 	// Get device handles
 	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+	vkEnumeratePhysicalDevices(instance.getVkInstance(), &deviceCount, devices.data());
 
 	// Pick the first best found device
 	for (const auto& device : devices)
