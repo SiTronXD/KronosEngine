@@ -66,11 +66,11 @@ void Camera::update()
 {
 	// Keyboard input
 	float rightSpeed =
-		Input::isKeyDown(Keys::D) - Input::isKeyDown(Keys::A);
+		(float) (Input::isKeyDown(Keys::D) - Input::isKeyDown(Keys::A));
 	float forwardSpeed =
-		Input::isKeyDown(Keys::W) - Input::isKeyDown(Keys::S);
+		(float) (Input::isKeyDown(Keys::W) - Input::isKeyDown(Keys::S));
 	float upSpeed =
-		Input::isKeyDown(Keys::E) - Input::isKeyDown(Keys::Q);
+		(float) (Input::isKeyDown(Keys::E) - Input::isKeyDown(Keys::Q));
 
 	// Move position
 	this->position += 

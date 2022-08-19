@@ -64,6 +64,6 @@ public:
 
 	static inline bool isKeyDown(const Keys& key) { return Input::keyDown[(int) key]; }
 	static inline bool isMouseButtonDown(const Mouse& mouse) { return mouseButtonDown[(int) mouse]; }
-	static inline const float& getMouseDeltaX() { return Input::lastCursorX - Input::cursorX; }
-	static inline const float& getMouseDeltaY() { return Input::lastCursorY - Input::cursorY; }
+	static inline const float getMouseDeltaX() { return Input::lastCursorX - Input::cursorX; }
+	static inline const float getMouseDeltaY() { return Input::lastCursorY - Input::cursorY; }
 };

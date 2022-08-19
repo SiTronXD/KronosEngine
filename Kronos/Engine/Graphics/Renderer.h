@@ -5,12 +5,12 @@
 #include "../Dev/Log.h"
 #include "../Application/Window.h"
 #include "Vulkan/CommandBufferArray.h"
-#include "Vulkan/QueueFamilies.h"
 #include "Vulkan/Pipeline.h"
 #include "Vulkan/DescriptorSetLayout.h"
 #include "Vulkan/RenderPass.h"
 #include "Vulkan/DescriptorPool.h"
 #include "Vulkan/DescriptorSetArray.h"
+#include "Vulkan/PhysicalDevice.h"
 #include "Vulkan/Device.h"
 #include "Texture.h"
 #include "VertexBuffer.h"
@@ -31,8 +31,8 @@ private:
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debugMessenger;
 	VkSurfaceKHR surface;
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
+	PhysicalDevice physicalDevice;
 	Device device;
 	QueueFamilies queueFamilies;
 	Swapchain swapchain;
@@ -69,7 +69,6 @@ private:
 	void createInstance();
 	void setupDebugMessenger();
 	void createSurface();
-	void pickPhysicalDevice();
 	void createUniformBuffers();
 	void createSyncObjects();
 
@@ -92,15 +91,15 @@ public:
 	void drawFrame(Camera& camera);
 
 	// Vulkan
+	inline VkPhysicalDevice& getVkPhysicalDevice() { return this->physicalDevice.getVkPhysicalDevice(); }
 	inline VkDevice& getVkDevice() { return this->device.getVkDevice(); }
+	inline VkSurfaceKHR& getVkSurface() { return this->surface; }
+
 	inline CommandPool& getCommandPool() { return this->commandPool; }
 	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
 	inline RenderPass& getRenderPass() { return this->renderPass; }
 	inline Swapchain& getSwapchain() { return this->swapchain; }
 	inline Window& getWindow() { return *this->window; }
-
-	inline VkPhysicalDevice& getVkPhysicalDevice() { return this->physicalDevice; }
-	inline VkSurfaceKHR& getVkSurface() { return this->surface; }
 
 	inline float getSwapchainAspectRatio() 
 		{ return (float) this->swapchain.getWidth() / this->swapchain.getHeight(); }

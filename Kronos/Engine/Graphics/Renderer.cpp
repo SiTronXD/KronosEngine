@@ -87,13 +87,19 @@ void Renderer::initVulkan()
 	this->createInstance();
 	this->setupDebugMessenger();
 	this->createSurface();
-	this->pickPhysicalDevice();
 
+	this->physicalDevice.pickPhysicalDevice(
+		this->instance, 
+		this->surface,
+		deviceExtensions, 
+		this->queueFamilies
+	);
 	this->device.createDevice(
 		deviceExtensions, 
 		validationLayers, 
 		enableValidationLayers, 
-		this->queueFamilies.getIndices());
+		this->queueFamilies.getIndices()
+	);
 	this->queueFamilies.extractQueueHandles(this->getVkDevice());
 	this->swapchain.createSwapchain();
 	this->renderPass.createRenderPass();
@@ -249,47 +255,6 @@ void Renderer::createSurface()
 	}
 }
 
-void Renderer::pickPhysicalDevice()
-{
-	// Get device count
-	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(this->instance, &deviceCount, nullptr);
-
-	// No devices found
-	if (deviceCount == 0)
-	{
-		Log::error("Failed to find GPUs with Vulkan support.");
-		return;
-	}
-
-	// Get device handles
-	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(this->instance, &deviceCount, devices.data());
-
-	// Pick the first best found device
-	for (const auto& device : devices)
-	{
-		QueueFamilyIndices indices{};
-
-		// Check support
-		if (SupportChecker::isDeviceSuitable(deviceExtensions, device, this->surface, indices))
-		{
-			this->physicalDevice = device;
-
-			// Set indices after finding a suitable device
-			this->queueFamilies.setIndices(indices);
-
-			break;
-		}
-	}
-
-	if (this->physicalDevice == VK_NULL_HANDLE)
-	{
-		Log::error("Failed to find a suitable GPU.");
-		return;
-	}
-}
-
 void Renderer::createUniformBuffers()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -300,7 +265,7 @@ void Renderer::createUniformBuffers()
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
 		Buffer::createBuffer(
-			this->physicalDevice,
+			this->getVkPhysicalDevice(),
 			this->getVkDevice(),
 			bufferSize,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -567,6 +532,7 @@ Renderer::Renderer()
 	vertexBuffer(*this),
 	indexBuffer(*this),
 
+	physicalDevice(*this),
 	device(*this),
 	renderPass(*this),
 	descriptorSetLayout(*this),

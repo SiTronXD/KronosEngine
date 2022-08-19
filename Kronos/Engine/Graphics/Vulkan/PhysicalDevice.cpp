@@ -1,0 +1,63 @@
+#include "PhysicalDevice.h"
+#include "SupportChecker.h"
+
+#include "../Renderer.h"
+
+PhysicalDevice::PhysicalDevice(Renderer& renderer)
+	: renderer(renderer),
+	physicalDevice(VK_NULL_HANDLE)
+{
+}
+
+PhysicalDevice::~PhysicalDevice()
+{
+}
+
+void PhysicalDevice::pickPhysicalDevice(
+	VkInstance instance, 
+	VkSurfaceKHR surface, 
+	const std::vector<const char*>& deviceExtensions,
+	QueueFamilies& outputQueueFamilies)
+{
+	// Get device count
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+	// No devices found
+	if (deviceCount == 0)
+	{
+		Log::error("Failed to find GPUs with Vulkan support.");
+		return;
+	}
+
+	// Get device handles
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+	// Pick the first best found device
+	for (const auto& device : devices)
+	{
+		QueueFamilyIndices indices{};
+
+		// Check support
+		if (SupportChecker::isDeviceSuitable(deviceExtensions, device, surface, indices))
+		{
+			this->physicalDevice = device;
+
+			// Set indices after finding a suitable device
+			outputQueueFamilies.setIndices(indices);
+
+			break;
+		}
+	}
+
+	if (this->physicalDevice == VK_NULL_HANDLE)
+	{
+		Log::error("Failed to find a suitable GPU.");
+		return;
+	}
+}
+
+void PhysicalDevice::cleanup()
+{
+}

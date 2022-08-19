@@ -110,6 +110,7 @@
     <ClCompile Include="Engine\Graphics\Vulkan\PipelineLayout.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\RenderPass.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\SupportChecker.cpp" />
+    <ClCompile Include="Engine\Graphics\Vulkan\PhysicalDevice.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Graphics\Vulkan\Device.h" />
@@ -141,6 +142,7 @@
     <ClInclude Include="Engine\Graphics\Vulkan\PipelineLayout.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\RenderPass.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\SupportChecker.h" />
+    <ClInclude Include="Engine\Graphics\Vulkan\PhysicalDevice.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
