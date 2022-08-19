@@ -109,7 +109,7 @@ Swapchain::~Swapchain()
 void Swapchain::createSwapchain()
 {
 	// Reusable variables
-	VkSurfaceKHR& surface = this->renderer.getVkSurface();
+	VkSurfaceKHR& surface = this->renderer.getSurface().getVkSurface();
 	VkDevice& device = this->renderer.getVkDevice();
 
 	// Swap chain support

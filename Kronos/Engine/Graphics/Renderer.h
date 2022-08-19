@@ -4,16 +4,17 @@
 
 #include "../Dev/Log.h"
 #include "../Application/Window.h"
-#include "Vulkan/CommandBufferArray.h"
-#include "Vulkan/Pipeline.h"
-#include "Vulkan/DescriptorSetLayout.h"
-#include "Vulkan/RenderPass.h"
-#include "Vulkan/DescriptorPool.h"
-#include "Vulkan/DescriptorSetArray.h"
 #include "Vulkan/Instance.h"
 #include "Vulkan/DebugMessenger.h"
+#include "Vulkan/Surface.h"
 #include "Vulkan/PhysicalDevice.h"
 #include "Vulkan/Device.h"
+#include "Vulkan/RenderPass.h"
+#include "Vulkan/DescriptorSetLayout.h"
+#include "Vulkan/Pipeline.h"
+#include "Vulkan/CommandBufferArray.h"
+#include "Vulkan/DescriptorPool.h"
+#include "Vulkan/DescriptorSetArray.h"
 #include "Texture.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -32,9 +33,7 @@ class Renderer
 private:
 	Instance instance;
 	DebugMessenger debugMessenger;
-
-	VkSurfaceKHR surface;
-
+	Surface surface;
 	PhysicalDevice physicalDevice;
 	Device device;
 	QueueFamilies queueFamilies;
@@ -69,7 +68,6 @@ private:
 
 	void initVulkan();
 
-	void createSurface();
 	void createUniformBuffers();
 	void createSyncObjects();
 
@@ -93,8 +91,8 @@ public:
 	inline VkInstance& getVkInstance() { return this->instance.getVkInstance(); }
 	inline VkPhysicalDevice& getVkPhysicalDevice() { return this->physicalDevice.getVkPhysicalDevice(); }
 	inline VkDevice& getVkDevice() { return this->device.getVkDevice(); }
-	inline VkSurfaceKHR& getVkSurface() { return this->surface; }
 
+	inline Surface& getSurface() { return this->surface; }
 	inline CommandPool& getCommandPool() { return this->commandPool; }
 	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
 	inline RenderPass& getRenderPass() { return this->renderPass; }

@@ -55,9 +55,7 @@ void Renderer::initVulkan()
 		this->window
 	);
 	this->debugMessenger.createDebugMessenger(enableValidationLayers);
-
-	this->createSurface();
-
+	this->surface.createSurface();
 	this->physicalDevice.pickPhysicalDevice(
 		this->instance,
 		this->surface,
@@ -137,24 +135,10 @@ void Renderer::cleanup()
 	this->renderPass.cleanup();
 	this->device.cleanup();
 	this->debugMessenger.cleanup();
-
-	vkDestroySurfaceKHR(this->getVkInstance(), this->surface, nullptr);
+	this->surface.cleanup();
 
 	// Destroys both physical device and instance
 	this->instance.cleanup();
-}
-
-void Renderer::createSurface()
-{
-	if (glfwCreateWindowSurface(
-		this->getVkInstance(),
-		this->window->getWindowHandle(),
-		nullptr,
-		&this->surface) != VK_SUCCESS)
-	{
-		Log::error("Failed to create window surface.");
-		return;
-	}
 }
 
 void Renderer::createUniformBuffers()
@@ -422,6 +406,7 @@ Renderer::Renderer()
 	indexBuffer(*this),
 
 	debugMessenger(*this),
+	surface(*this),
 	device(*this),
 	renderPass(*this),
 	descriptorSetLayout(*this),
@@ -431,9 +416,7 @@ Renderer::Renderer()
 	commandBuffers(*this, commandPool),
 	descriptorPool(*this),
 	descriptorSets(*this),
-	swapchain(*this),
-
-	surface(VK_NULL_HANDLE)
+	swapchain(*this)
 {
 }
 

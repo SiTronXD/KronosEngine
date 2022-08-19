@@ -6,6 +6,7 @@
 
 class Renderer;
 class Instance;
+class Surface;
 
 class PhysicalDevice
 {
@@ -17,8 +18,8 @@ public:
 	~PhysicalDevice();
 
 	void pickPhysicalDevice(
-		Instance instance, 
-		VkSurfaceKHR surface,
+		Instance& instance, 
+		Surface& surface,
 		const std::vector<const char*>& deviceExtensions,
 		QueueFamilies& outputQueueFamilies);
 

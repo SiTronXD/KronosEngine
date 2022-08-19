@@ -1,6 +1,7 @@
 #include "PhysicalDevice.h"
 #include "SupportChecker.h"
 #include "Instance.h"
+#include "Surface.h"
 
 #include "../Renderer.h"
 
@@ -14,8 +15,8 @@ PhysicalDevice::~PhysicalDevice()
 }
 
 void PhysicalDevice::pickPhysicalDevice(
-	Instance instance, 
-	VkSurfaceKHR surface, 
+	Instance& instance, 
+	Surface& surface, 
 	const std::vector<const char*>& deviceExtensions,
 	QueueFamilies& outputQueueFamilies)
 {
@@ -40,7 +41,7 @@ void PhysicalDevice::pickPhysicalDevice(
 		QueueFamilyIndices indices{};
 
 		// Check support
-		if (SupportChecker::isDeviceSuitable(deviceExtensions, device, surface, indices))
+		if (SupportChecker::isDeviceSuitable(deviceExtensions, device, surface.getVkSurface(), indices))
 		{
 			this->physicalDevice = device;
 

@@ -114,6 +114,9 @@
     <ClCompile Include="Engine\Graphics\Vulkan\DebugMessenger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Graphics\Vulkan\Surface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Dev\Log.h">
@@ -210,6 +213,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Graphics\Vulkan\DebugMessenger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\Vulkan\Surface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
