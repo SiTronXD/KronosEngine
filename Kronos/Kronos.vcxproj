@@ -114,6 +114,7 @@
     <ClCompile Include="Engine\Graphics\Vulkan\SupportChecker.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\PhysicalDevice.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Surface.cpp" />
+    <ClCompile Include="Engine\Graphics\Mesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Graphics\Vulkan\DebugMessenger.h" />
@@ -149,6 +150,7 @@
     <ClInclude Include="Engine\Graphics\Vulkan\PhysicalDevice.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\Instance.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\Surface.h" />
+    <ClInclude Include="Engine\Graphics\Mesh.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

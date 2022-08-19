@@ -65,6 +65,11 @@ void CommandBuffer::bindVertexBuffer(VertexBuffer& vertexBuffer)
 
 void CommandBuffer::bindIndexBuffer(IndexBuffer& indexBuffer)
 {
+#ifdef _DEBUG
+	if (indexBuffer.getVkBuffer() == VK_NULL_HANDLE)
+		Log::error("Index buffer has not been created.");
+#endif
+
 	vkCmdBindIndexBuffer(this->commandBuffer, indexBuffer.getVkBuffer(), 0, VK_INDEX_TYPE_UINT32);
 }
 

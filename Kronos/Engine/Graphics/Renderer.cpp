@@ -8,28 +8,6 @@
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-const std::vector<Vertex> vertices =
-{
-	{{  0.5f,  0.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
-	{{ -0.5f,  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-	{{ -0.5f,  0.0f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
-	{{  0.5f,  0.0f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
-
-	{{  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
-	{{ -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-	{{ -0.5f, -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
-	{{  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
-};
-
-const std::vector<uint32_t> indices =
-{
-	0, 1, 2,
-	2, 3, 0,
-
-	4, 5, 6,
-	6, 7, 4,
-};
-
 const std::vector<const char*> validationLayers =
 {
 	"VK_LAYER_KHRONOS_validation"
@@ -85,8 +63,6 @@ void Renderer::initVulkan()
 
 	// Shader resources
 	this->texture.createFromFile("Resources/Textures/poggers.PNG");
-	this->vertexBuffer.createVertexBuffer(vertices);
-	this->indexBuffer.createIndexBuffer(indices);
 	
 	this->createUniformBuffers();
 	
@@ -104,9 +80,6 @@ void Renderer::initVulkan()
 
 void Renderer::cleanup()
 {
-	// Wait for device before cleanup
-	vkDeviceWaitIdle(this->getVkDevice());
-
 	this->swapchain.cleanup();
 
 	this->texture.cleanup();
@@ -118,9 +91,6 @@ void Renderer::cleanup()
 		vkDestroyBuffer(this->getVkDevice(), this->uniformBuffers[i], nullptr);
 		vkFreeMemory(this->getVkDevice(), this->uniformBuffersMemory[i], nullptr);
 	}
-
-	this->indexBuffer.cleanup();
-	this->vertexBuffer.cleanup();
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
@@ -201,7 +171,7 @@ void Renderer::createSyncObjects()
 	}
 }
 
-void Renderer::drawFrame(Camera& camera)
+void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 {
 	// Wait, then reset fence
 	vkWaitForFences(
@@ -240,7 +210,7 @@ void Renderer::drawFrame(Camera& camera)
 	vkResetFences(this->getVkDevice(), 1, &this->inFlightFences[this->currentFrame]);
 
 	// Record command buffer
-	this->recordCommandBuffer(imageIndex);
+	this->recordCommandBuffer(imageIndex, mesh);
 
 	// Info for submitting command buffer
 	VkSubmitInfo submitInfo{};
@@ -335,7 +305,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 	vkUnmapMemory(this->getVkDevice(), this->uniformBuffersMemory[currentImage]);
 }
 
-void Renderer::recordCommandBuffer(uint32_t imageIndex)
+void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
 {
 	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrame);
 
@@ -387,11 +357,11 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 			);
 
 				// Record binding vertex/index buffer
-				commandBuffer.bindVertexBuffer(this->vertexBuffer);
-				commandBuffer.bindIndexBuffer(this->indexBuffer);
+				commandBuffer.bindVertexBuffer(mesh.getVertexBuffer());
+				commandBuffer.bindIndexBuffer(mesh.getIndexBuffer());
 
 				// Record draw!
-				commandBuffer.drawIndexed(indices.size());
+				commandBuffer.drawIndexed(mesh.getNumIndices());
 
 		// End render pass
 		commandBuffer.endRenderPass();
@@ -402,10 +372,8 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex)
 
 Renderer::Renderer()
 	: window(nullptr),
-	texture(*this),
 
-	vertexBuffer(*this),
-	indexBuffer(*this),
+	texture(*this),
 
 	debugMessenger(*this),
 	surface(*this),
@@ -435,4 +403,10 @@ void Renderer::init()
 void Renderer::setWindow(Window& window)
 {
 	this->window = &window;
+}
+
+void Renderer::startCleanup()
+{
+	// Wait for device before cleanup
+	vkDeviceWaitIdle(this->getVkDevice());
 }

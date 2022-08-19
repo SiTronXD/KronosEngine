@@ -16,10 +16,9 @@
 #include "Vulkan/DescriptorPool.h"
 #include "Vulkan/DescriptorSetArray.h"
 #include "Texture.h"
-#include "VertexBuffer.h"
-#include "IndexBuffer.h"
 #include "Swapchain.h"
 #include "Camera.h"
+#include "Mesh.h"
 
 struct UniformBufferObject
 {
@@ -55,9 +54,6 @@ private:
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
 
-	VertexBuffer vertexBuffer;
-	IndexBuffer indexBuffer;
-
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 
@@ -74,7 +70,7 @@ private:
 
 	void updateUniformBuffer(uint32_t currentImage, Camera& camera);
 
-	void recordCommandBuffer(uint32_t imageIndex);
+	void recordCommandBuffer(uint32_t imageIndex, Mesh& mesh);
 
 public:
 	bool framebufferResized = false;
@@ -84,9 +80,10 @@ public:
 
 	void init();
 	void setWindow(Window& window);
+	void startCleanup();
 	void cleanup();
 
-	void drawFrame(Camera& camera);
+	void drawFrame(Camera& camera, Mesh& mesh);
 
 	// Vulkan
 	inline VkInstance& getVkInstance() { return this->instance.getVkInstance(); }

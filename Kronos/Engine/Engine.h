@@ -8,6 +8,8 @@ private:
 	Window window;
 	Renderer renderer;
 
+	void loadMesh(Mesh& outputMesh);
+
 public:
 	Engine();
 	~Engine();
