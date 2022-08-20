@@ -1,6 +1,25 @@
 #include "Engine.h"
 #include "Application/Time.h"
+#include "Application/Input.h"
 #include "Graphics/Mesh.h"
+
+std::vector<uint32_t> indicesWrong =
+{
+	0, 1, 2,
+	2, 3, 0,
+
+	4, 5, 6,
+	6, 7, 4,
+};
+
+std::vector<uint32_t> indicesCorrect =
+{
+	4, 5, 6,
+	6, 7, 4,
+
+	0, 1, 2,
+	2, 3, 0
+};
 
 void Engine::loadMesh(Mesh& outputMesh)
 {
@@ -16,15 +35,8 @@ void Engine::loadMesh(Mesh& outputMesh)
 		{{ -0.5f, -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
 		{{  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
 	};
-	std::vector<uint32_t> indices =
-	{
-		0, 1, 2,
-		2, 3, 0,
 
-		4, 5, 6,
-		6, 7, 4,
-	};
-	outputMesh.createMesh(vertices, indices);
+	outputMesh.createMesh(vertices, indicesWrong, true);
 }
 
 Engine::Engine()
@@ -54,6 +66,11 @@ void Engine::init()
 
 		// "Game logic"
 		camera.update();
+
+		if (Input::isKeyDown(Keys::R))
+			mesh.getIndexBuffer().updateIndexBuffer(indicesCorrect, this->renderer.getCurrentFrameIndex());
+		else
+			mesh.getIndexBuffer().updateIndexBuffer(indicesWrong, this->renderer.getCurrentFrameIndex());
 
 		// Render
 		// TODO: change to scene submission rather

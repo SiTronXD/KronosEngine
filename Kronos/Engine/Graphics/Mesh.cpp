@@ -13,11 +13,13 @@ Mesh::~Mesh()
 {
 }
 
-void Mesh::createMesh(std::vector<Vertex>& vertices,
-	std::vector<uint32_t>& indices)
+void Mesh::createMesh(
+	std::vector<Vertex>& vertices,
+	std::vector<uint32_t>& indices,
+	bool cpuWriteToIndexBuffer)
 {
 	this->vertexBuffer.createVertexBuffer(vertices);
-	this->indexBuffer.createIndexBuffer(indices);
+	this->indexBuffer.createIndexBuffer(indices, cpuWriteToIndexBuffer);
 
 	this->numIndices = indices.size();
 }

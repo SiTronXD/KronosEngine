@@ -13,6 +13,9 @@ private:
 	VkBuffer buffer;
 	VkDeviceMemory bufferMemory;
 
+	std::vector<VkBuffer> bufferVec;
+	std::vector<VkDeviceMemory> bufferMemoryVec;
+
 	Renderer& renderer;
 
 protected:
@@ -44,4 +47,6 @@ public:
 
 	inline VkBuffer& getVkBuffer() { return this->buffer; }
 	inline VkDeviceMemory& getVkBufferMemory() { return this->bufferMemory; }
+	inline std::vector<VkBuffer>& getVkBufferVec() { return this->bufferVec; }
+	inline std::vector<VkDeviceMemory>& getVkBufferMemoryVec() { return this->bufferMemoryVec; }
 };

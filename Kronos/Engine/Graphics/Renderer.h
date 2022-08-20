@@ -30,6 +30,8 @@ struct UniformBufferObject
 class Renderer
 {
 private:
+	const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
 	Instance instance;
 	DebugMessenger debugMessenger;
 	Surface surface;
@@ -59,7 +61,7 @@ private:
 
 	Window* window;
 
-	uint32_t currentFrame = 0;
+	uint32_t currentFrameIndex = 0;
 
 	Texture texture;
 
@@ -100,4 +102,6 @@ public:
 
 	inline float getSwapchainAspectRatio() 
 		{ return (float) this->swapchain.getWidth() / this->swapchain.getHeight(); }
+	inline const uint32_t& getMaxFramesInFlight() const { return this->MAX_FRAMES_IN_FLIGHT; }
+	inline const uint32_t& getCurrentFrameIndex() const { return this->currentFrameIndex; }
 };

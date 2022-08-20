@@ -63,14 +63,17 @@ void CommandBuffer::bindVertexBuffer(VertexBuffer& vertexBuffer)
 	vkCmdBindVertexBuffers(this->commandBuffer, 0, 1, vertexBuffers, offsets);
 }
 
-void CommandBuffer::bindIndexBuffer(IndexBuffer& indexBuffer)
+void CommandBuffer::bindIndexBuffer(IndexBuffer& indexBuffer, uint32_t frameIndex)
 {
 #ifdef _DEBUG
-	if (indexBuffer.getVkBuffer() == VK_NULL_HANDLE)
+	if (indexBuffer.getVkBuffer() == VK_NULL_HANDLE && indexBuffer.getVkBufferVec().size() <= 0)
 		Log::error("Index buffer has not been created.");
 #endif
 
-	vkCmdBindIndexBuffer(this->commandBuffer, indexBuffer.getVkBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	if(!indexBuffer.getIsBufferDynamic())
+		vkCmdBindIndexBuffer(this->commandBuffer, indexBuffer.getVkBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	else
+		vkCmdBindIndexBuffer(this->commandBuffer, indexBuffer.getVkBufferVec()[frameIndex], 0, VK_INDEX_TYPE_UINT32);
 }
 
 void CommandBuffer::bindDescriptorSet(

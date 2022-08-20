@@ -25,7 +25,7 @@ public:
 	void setViewport(const VkViewport& viewport);
 	void setScissor(const VkRect2D& scissor);
 	void bindVertexBuffer(VertexBuffer& vertexBuffer);
-	void bindIndexBuffer(IndexBuffer& indexBuffer);
+	void bindIndexBuffer(IndexBuffer& indexBuffer, uint32_t frameIndex);
 	void bindDescriptorSet(
 		const PipelineLayout& pipelineLayout,
 		const DescriptorSet& descriptorSet);

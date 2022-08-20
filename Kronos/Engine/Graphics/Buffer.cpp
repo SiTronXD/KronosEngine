@@ -116,4 +116,12 @@ void Buffer::cleanup()
 {
 	vkDestroyBuffer(Buffer::getRenderer().getVkDevice(), this->buffer, nullptr);
 	vkFreeMemory(Buffer::getRenderer().getVkDevice(), this->bufferMemory, nullptr);
+
+	for (size_t i = 0; i < this->bufferVec.size(); ++i)
+	{
+		vkDestroyBuffer(Buffer::getRenderer().getVkDevice(), this->bufferVec[i], nullptr);
+		vkFreeMemory(Buffer::getRenderer().getVkDevice(), this->bufferMemoryVec[i], nullptr);
+	}
+	this->bufferVec.clear();
+	this->bufferMemoryVec.clear();
 }

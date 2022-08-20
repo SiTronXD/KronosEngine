@@ -6,8 +6,6 @@
 #include <set>
 #include <chrono>
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
-
 const std::vector<const char*> validationLayers =
 {
 	"VK_LAYER_KHRONOS_validation"
@@ -177,7 +175,7 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	vkWaitForFences(
 		this->getVkDevice(), 
 		1, 
-		&this->inFlightFences[this->currentFrame], 
+		&this->inFlightFences[this->currentFrameIndex],
 		VK_TRUE, 
 		UINT64_MAX
 	);
@@ -188,7 +186,7 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 		this->getVkDevice(),
 		this->swapchain.getVkSwapchain(),
 		UINT64_MAX,
-		this->imageAvailableSemaphores[this->currentFrame],
+		this->imageAvailableSemaphores[this->currentFrameIndex],
 		VK_NULL_HANDLE,
 		&imageIndex
 	);
@@ -204,10 +202,10 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 		Log::error("Failed to acquire swapchain image.");
 	}
 
-	this->updateUniformBuffer(this->currentFrame, camera);
+	this->updateUniformBuffer(this->currentFrameIndex, camera);
 
 	// Only reset the fence if we are submitting work
-	vkResetFences(this->getVkDevice(), 1, &this->inFlightFences[this->currentFrame]);
+	vkResetFences(this->getVkDevice(), 1, &this->inFlightFences[this->currentFrameIndex]);
 
 	// Record command buffer
 	this->recordCommandBuffer(imageIndex, mesh);
@@ -216,16 +214,16 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrame] };
+	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrameIndex] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = 
-		&this->commandBuffers.getCommandBuffer(this->currentFrame).getVkCommandBuffer();
+		&this->commandBuffers.getCommandBuffer(this->currentFrameIndex).getVkCommandBuffer();
 
-	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
+	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrameIndex] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -234,7 +232,7 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 		this->queueFamilies.getVkGraphicsQueue(),
 		1,
 		&submitInfo,
-		this->inFlightFences[this->currentFrame])
+		this->inFlightFences[this->currentFrameIndex])
 		!= VK_SUCCESS)
 	{
 		Log::error("Failed to submit draw command buffer.");
@@ -269,7 +267,7 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	}
 
 	// Next frame
-	this->currentFrame = (this->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	this->currentFrameIndex = (this->currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
@@ -307,7 +305,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 
 void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
 {
-	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrame);
+	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrameIndex);
 
 	// Begin
 	commandBuffer.resetAndBegin();
@@ -353,12 +351,12 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
 			// Record binding descriptor sets
 			commandBuffer.bindDescriptorSet(
 				this->graphicsPipelineLayout,
-				this->descriptorSets.getDescriptorSet(this->currentFrame)
+				this->descriptorSets.getDescriptorSet(this->currentFrameIndex)
 			);
 
 				// Record binding vertex/index buffer
 				commandBuffer.bindVertexBuffer(mesh.getVertexBuffer());
-				commandBuffer.bindIndexBuffer(mesh.getIndexBuffer());
+				commandBuffer.bindIndexBuffer(mesh.getIndexBuffer(), this->currentFrameIndex);
 
 				// Record draw!
 				commandBuffer.drawIndexed(mesh.getNumIndices());

@@ -19,7 +19,8 @@ public:
 
 	void createMesh(
 		std::vector<Vertex>& vertices, 
-		std::vector<uint32_t>& indices);
+		std::vector<uint32_t>& indices,
+		bool cpuWriteToIndexBuffer = false);
 
 	void cleanup();
 
