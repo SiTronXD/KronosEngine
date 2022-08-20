@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\DataStructures\BSP.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DebugMessenger.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Device.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DescriptorSetArray.cpp" />
@@ -115,8 +116,10 @@
     <ClCompile Include="Engine\Graphics\Vulkan\PhysicalDevice.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Surface.cpp" />
     <ClCompile Include="Engine\Graphics\Mesh.cpp" />
+    <ClCompile Include="Engine\Graphics\MeshData.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\DataStructures\BSP.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DebugMessenger.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\Device.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DescriptorSetArray.h" />
@@ -151,6 +154,7 @@
     <ClInclude Include="Engine\Graphics\Vulkan\Instance.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\Surface.h" />
     <ClInclude Include="Engine\Graphics\Mesh.h" />
+    <ClInclude Include="Engine\Graphics\MeshData.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

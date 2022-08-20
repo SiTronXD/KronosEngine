@@ -14,14 +14,13 @@ Mesh::~Mesh()
 }
 
 void Mesh::createMesh(
-	std::vector<Vertex>& vertices,
-	std::vector<uint32_t>& indices,
+	MeshData& meshData,
 	bool cpuWriteToIndexBuffer)
 {
-	this->vertexBuffer.createVertexBuffer(vertices);
-	this->indexBuffer.createIndexBuffer(indices, cpuWriteToIndexBuffer);
+	this->vertexBuffer.createVertexBuffer(meshData.getVertices());
+	this->indexBuffer.createIndexBuffer(meshData.getIndices(), cpuWriteToIndexBuffer);
 
-	this->numIndices = indices.size();
+	this->numIndices = meshData.getIndices().size();
 }
 
 void Mesh::cleanup()

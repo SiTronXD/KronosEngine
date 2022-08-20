@@ -120,6 +120,12 @@
     <ClCompile Include="Engine\Graphics\Mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\DataStructures\BSP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Graphics\MeshData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Dev\Log.h">
@@ -222,6 +228,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Graphics\Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\DataStructures\BSP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Graphics\MeshData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

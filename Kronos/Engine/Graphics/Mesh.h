@@ -2,6 +2,7 @@
 
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "MeshData.h"
 
 class Renderer;
 
@@ -18,8 +19,7 @@ public:
 	~Mesh();
 
 	void createMesh(
-		std::vector<Vertex>& vertices, 
-		std::vector<uint32_t>& indices,
+		MeshData& meshData,
 		bool cpuWriteToIndexBuffer = false);
 
 	void cleanup();
