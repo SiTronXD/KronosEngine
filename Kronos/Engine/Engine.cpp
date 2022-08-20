@@ -1,18 +1,25 @@
+#define FAST_OBJ_IMPLEMENTATION
+#include <fast_obj.h>
+
 #include "Engine.h"
 #include "Application/Time.h"
 #include "Application/Input.h"
 #include "Graphics/Mesh.h"
 
-std::vector<uint32_t> indicesWrong =
+/*
+std::vector<Vertex> vertices =
 {
-	0, 1, 2,
-	2, 3, 0,
+	{{  0.5f,  0.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
+	{{ -0.5f,  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
+	{{ -0.5f,  0.0f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
+	{{  0.5f,  0.0f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
 
-	4, 5, 6,
-	6, 7, 4,
+	{{  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
+	{{ -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
+	{{ -0.5f, -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
+	{{  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
 };
-
-std::vector<uint32_t> indicesCorrect =
+std::vector<uint32_t> indices =
 {
 	4, 5, 6,
 	6, 7, 4,
@@ -20,23 +27,66 @@ std::vector<uint32_t> indicesCorrect =
 	0, 1, 2,
 	2, 3, 0
 };
+*/
 
 void Engine::loadMesh(Mesh& outputMesh)
 {
-	std::vector<Vertex> vertices =
+	// Load model (assume triangulation)
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+	fastObjMesh* loadedObj = fast_obj_read("Resources/Models/dragon_vrip_res4.obj");
+
+	// Positions
+	vertices.resize(loadedObj->index_count);
+	for (unsigned int i = 0; i < loadedObj->position_count; ++i)
 	{
-		{{  0.5f,  0.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
-		{{ -0.5f,  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-		{{ -0.5f,  0.0f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
-		{{  0.5f,  0.0f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
+		Vertex& v = vertices[i];
+		v.pos.x = loadedObj->positions[i * 3 + 0];
+		v.pos.y = loadedObj->positions[i * 3 + 1];
+		v.pos.z = loadedObj->positions[i * 3 + 2];
 
-		{{  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
-		{{ -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-		{{ -0.5f, -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
-		{{  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
-	};
+		v.color.x = 0.5f;
+	}
 
-	outputMesh.createMesh(vertices, indicesWrong, true);
+	// Indices
+	indices.resize(loadedObj->index_count);
+	for (unsigned int i = 0; i < loadedObj->index_count; ++i)
+	{
+		indices[i] = loadedObj->indices[i].p;
+	}
+
+	// Visualize normals as colors
+	for (size_t i = 0; i < indices.size(); i += 3)
+	{
+		Vertex& v0 = vertices[indices[i + 0]];
+		Vertex& v1 = vertices[indices[i + 1]];
+		Vertex& v2 = vertices[indices[i + 2]];
+
+		glm::vec3 edge0 = v1.pos - v0.pos;
+		glm::vec3 edge1 = v2.pos - v0.pos;
+
+		glm::vec3 normal = glm::cross(edge0, edge1);
+		normal = glm::normalize(normal);
+
+		v0.color += normal;
+		v1.color += normal;
+		v2.color += normal;
+	}
+
+	// Normalize smooth normals
+	for (size_t i = 0; i < vertices.size(); ++i)
+	{
+		Vertex& v = vertices[i];
+		if (glm::dot(v.color, v.color) >= 0.01f)
+			v.color = glm::normalize(v.color);
+	}
+
+
+	// Create mesh
+	outputMesh.createMesh(vertices, indices, true);
+
+
+	fast_obj_destroy(loadedObj);
 }
 
 Engine::Engine()
@@ -66,11 +116,6 @@ void Engine::init()
 
 		// "Game logic"
 		camera.update();
-
-		if (Input::isKeyDown(Keys::R))
-			mesh.getIndexBuffer().updateIndexBuffer(indicesCorrect, this->renderer.getCurrentFrameIndex());
-		else
-			mesh.getIndexBuffer().updateIndexBuffer(indicesWrong, this->renderer.getCurrentFrameIndex());
 
 		// Render
 		// TODO: change to scene submission rather
