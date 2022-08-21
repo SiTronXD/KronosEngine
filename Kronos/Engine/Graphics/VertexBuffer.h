@@ -46,6 +46,19 @@ struct Vertex
 
 		return attributeDescriptions;
 	}
+
+	static Vertex interpolateVertex(
+		const Vertex& v0, 
+		const Vertex& v1, 
+		const float& t)
+	{
+		Vertex newVert{};
+		newVert.pos = v0.pos + (v1.pos - v0.pos) * t;
+		newVert.texCoord = v0.texCoord + (v1.texCoord - v0.texCoord) * t;
+		newVert.color = v0.color + (v1.color - v0.color) * t;
+
+		return newVert;
+	}
 };
 
 class VertexBuffer : public Buffer
