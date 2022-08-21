@@ -103,14 +103,15 @@ bool SupportChecker::isDeviceSuitable(
 			!swapchainSupport.presentModes.empty();
 	}
 
-	// Sampler anisotropy support
+	// Get device features
 	VkPhysicalDeviceFeatures supportedFeatures;
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
 	bool foundSuitableDevice = outputIndices.isComplete() &&
 		extensionsSupported &&
 		swapChainAdequate &&
-		supportedFeatures.samplerAnisotropy;
+		supportedFeatures.samplerAnisotropy &&
+		supportedFeatures.fillModeNonSolid;
 
 	return foundSuitableDevice;
 }

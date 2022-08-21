@@ -57,8 +57,9 @@ void Engine::init()
 
 	// Mesh data to render
 	MeshData meshData;
-	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
-	meshData.create(quadsVertices, quadsIndices);
+	meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
+	//meshData.loadOBJ("Resources/Models/sphereTest.obj");
+	//meshData.create(quadsVertices, quadsIndices);
 
 	// BSP to render mesh with
 	BSP bsp;

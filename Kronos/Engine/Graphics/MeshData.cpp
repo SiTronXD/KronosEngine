@@ -68,6 +68,8 @@ void MeshData::loadOBJ(const std::string& filePath)
 		Vertex& v = this->vertices[i];
 		if (glm::dot(v.color, v.color) >= 0.01f)
 			v.color = glm::normalize(v.color);
+
+		v.color = glm::vec3(0.5f, 0.0f, 0.0f);
 	}
 
 	// Destroy loaded obj model

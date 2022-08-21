@@ -44,6 +44,7 @@ void Device::createDevice(
 
 	// Device features
 	VkPhysicalDeviceFeatures deviceFeatures{};
+	deviceFeatures.fillModeNonSolid = VK_TRUE;
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	// ---------- Logical device ----------

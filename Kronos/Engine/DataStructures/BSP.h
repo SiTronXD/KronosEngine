@@ -2,12 +2,6 @@
 
 #include "../Graphics/MeshData.h"
 
-struct ProjectionResult
-{
-	bool inHalfSpace;
-	float t;
-};
-
 struct Plane
 {
 	glm::vec3 pos;
@@ -23,7 +17,9 @@ struct Plane
 class BSP
 {
 private:
-	ProjectionResult projectPointOnNormal(const Vertex& v, const Plane& plane);
+	float projectPointOnNormal(const Vertex& v, const Plane& plane);
+
+	bool inSameHalfSpace(const float& t0, const float& t1);
 
 public:
 	BSP();
