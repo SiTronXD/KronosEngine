@@ -11,6 +11,15 @@ MeshData::~MeshData()
 {
 }
 
+void MeshData::create(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+{
+	this->vertices.reserve(vertices.size());
+	this->indices.reserve(indices.size());
+
+	this->vertices.assign(vertices.begin(), vertices.end());
+	this->indices.assign(indices.begin(), indices.end());
+}
+
 void MeshData::loadOBJ(const std::string& filePath)
 {
 	// Load model (assume triangulation)

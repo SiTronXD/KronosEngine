@@ -13,6 +13,8 @@ public:
 	MeshData();
 	~MeshData();
 
+	void create(std::vector<Vertex>& vertices, 
+		std::vector<uint32_t>& indices);
 	void loadOBJ(const std::string& filePath);
 
 	inline std::vector<Vertex>& getVertices() { return this->vertices; }

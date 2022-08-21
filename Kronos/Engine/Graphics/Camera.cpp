@@ -49,7 +49,7 @@ Camera::Camera(Renderer& renderer)
 	viewMatrix(glm::mat4(1.0f)),
 	projectionMatrix(glm::mat4(1.0f)),
 
-	position(0.0f, 2.0f, 2.0f),
+	position(0.0f, 1.0f, 2.0f),
 	forwardDir(-1.0f, -1.0f, -1.0f),
 	
 	yaw(SMath::PI),

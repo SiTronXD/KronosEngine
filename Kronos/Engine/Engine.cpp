@@ -4,8 +4,7 @@
 #include "Graphics/Mesh.h"
 #include "DataStructures/BSP.h"
 
-/*
-std::vector<Vertex> vertices =
+std::vector<Vertex> quadsVertices =
 {
 	{{  0.5f,  0.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
 	{{ -0.5f,  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
@@ -17,7 +16,7 @@ std::vector<Vertex> vertices =
 	{{ -0.5f, -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
 	{{  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
 };
-std::vector<uint32_t> indices =
+std::vector<uint32_t> quadsIndices =
 {
 	4, 5, 6,
 	6, 7, 4,
@@ -25,7 +24,6 @@ std::vector<uint32_t> indices =
 	0, 1, 2,
 	2, 3, 0
 };
-*/
 
 Engine::Engine()
 {
@@ -44,7 +42,8 @@ void Engine::init()
 
 	// Mesh data to render
 	MeshData meshData;
-	meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
+	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
+	meshData.create(quadsVertices, quadsIndices);
 
 	// BSP to render mesh with
 	BSP bsp;

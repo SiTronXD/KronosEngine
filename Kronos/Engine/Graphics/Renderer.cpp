@@ -286,7 +286,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 		time * glm::radians(90.0f),
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);*/
-	ubo.model = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f, 5.0f, 5.0f));
+	ubo.model = glm::mat4(1.0f);
 	ubo.view = camera.getViewMatrix();
 	ubo.proj = camera.getProjectionMatrix();
 
