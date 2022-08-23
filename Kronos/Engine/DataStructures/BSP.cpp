@@ -1,6 +1,8 @@
 #include "BSP.h"
 #include "../Dev/Log.h"
 
+#define LOOP_IND(index) ((index) % 3)
+
 float BSP::projectPointOnNormal(const Vertex& v, const Plane& plane)
 {
 	glm::vec3 planeToVert = v.pos - plane.pos;
@@ -24,18 +26,16 @@ BSP::~BSP()
 
 void BSP::createFromMeshData(MeshData& meshData)
 {
-	/*
-	Plane plane(
+	const glm::vec3 debugColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	/*Plane plane(
 		glm::vec3(0.35f, 0.0f, 0.35f),
 		glm::vec3(1.0f, 0.0f, 1.0f)
-	);
-	*/
-	/*
-	Plane plane(
+	);*/
+	/*Plane plane(
 		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(1.0f, 0.0f, 0.0f)
-	);
-	*/
+		glm::vec3(-1.0f, 0.0f, 1.0f)
+	);*/
 	Plane plane(
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(1.0f, 0.1f, 1.0f)
@@ -65,11 +65,11 @@ void BSP::createFromMeshData(MeshData& meshData)
 		};
 
 		if (projT[0] == 0.0f)
-			vertices[triIndices[0]].color = glm::vec3(1.0f, 1.0f, 1.0f);
+			vertices[triIndices[0]].color = debugColor;
 		if (projT[1] == 0.0f)
-			vertices[triIndices[1]].color = glm::vec3(1.0f, 1.0f, 1.0f);
+			vertices[triIndices[1]].color = debugColor;
 		if (projT[2] == 0.0f)
-			vertices[triIndices[2]].color = glm::vec3(1.0f, 1.0f, 1.0f);
+			vertices[triIndices[2]].color = debugColor;
 
 		// All points are in the same half-space
 		if ((projT[0] >= 0 && projT[1] >= 0 && projT[2] >= 0) ||
@@ -82,9 +82,8 @@ void BSP::createFromMeshData(MeshData& meshData)
 			continue;
 		}
 
-		// Create 2 vertices
-		uint32_t newTriVertOffset = 0;
-		Vertex newTriVertices[2]{};
+		// Create max 2 new vertices
+		uint32_t numNewVerts = 0;
 		uint32_t newTriIndices[2] =
 		{
 			vertices.size(),
@@ -99,77 +98,77 @@ void BSP::createFromMeshData(MeshData& meshData)
 			// Check if the points are in different half-spaces
 			if (!this->inSameHalfSpace(currentResult, lastResult))
 			{
+				// Points
 				Vertex& v0 = vertices[triIndices[i]];
-				Vertex& v1 = vertices[triIndices[(i + 2) % 3]];
+				Vertex& v1 = vertices[triIndices[LOOP_IND(i + 2)]];
 
+				// Interpolate new vertex
 				float t = currentResult / (currentResult - lastResult);
 				Vertex newVert = Vertex::interpolateVertex(
 					v0, 
 					v1,
 					t
 				);
-				newVert.color = glm::vec3(1.0f, 1.0f, 1.0f);
+				newVert.color = debugColor;
 
-				newTriVertices[newTriVertOffset] = newVert;
-				newTriVertOffset++;
+				// Add new vertex
+				vertices.push_back(newVert);
+				numNewVerts++;
 			}
 
 			lastResult = currentResult;
 		}
 
-
-		if (newTriVertOffset == 2)
+		// The most common case
+		if (numNewVerts == 2)
 		{
-			uint32_t loneVertIndex = 0;
-			if (this->inSameHalfSpace(projT[0], projT[1]))
-			{
-				loneVertIndex = 2;
-			}
-			else if (this->inSameHalfSpace(projT[0], projT[2]))
-			{
-				loneVertIndex = 1;
-			}
+			uint32_t baseIndex =
+				/*this->inSameHalfSpace(projT[1], projT[2]) * 0 +*/
+				this->inSameHalfSpace(projT[0], projT[2]) * 1 +
+				this->inSameHalfSpace(projT[0], projT[1]) * 2;
 
 			// Reverse order if needed
-			if (loneVertIndex != 2)
+			if (baseIndex == 2)
 			{
-				vertices.push_back(newTriVertices[0]);
-				vertices.push_back(newTriVertices[1]);
-			}
-			else
-			{
-				vertices.push_back(newTriVertices[1]);
-				vertices.push_back(newTriVertices[0]);
+				const Vertex tempVert = vertices[vertices.size() - 2];
+				vertices[vertices.size() - 2] = vertices[vertices.size() - 1];
+				vertices[vertices.size() - 1] = tempVert;
 			}
 
-			newIndices.push_back(triIndices[loneVertIndex]);
+			// Add 3 new triangles
+			newIndices.push_back(triIndices[baseIndex]);
 			newIndices.push_back(newTriIndices[1]);
 			newIndices.push_back(newTriIndices[0]);
-			newIndices.push_back(triIndices[(loneVertIndex + 1) % 3]);
+
+			newIndices.push_back(triIndices[LOOP_IND(baseIndex + 1)]);
 			newIndices.push_back(newTriIndices[0]);
 			newIndices.push_back(newTriIndices[1]);
-			newIndices.push_back(triIndices[(loneVertIndex + 1) % 3]);
-			newIndices.push_back(triIndices[(loneVertIndex + 2) % 3]);
+
+			newIndices.push_back(triIndices[LOOP_IND(baseIndex + 1)]);
+			newIndices.push_back(triIndices[LOOP_IND(baseIndex + 2)]);
 			newIndices.push_back(newTriIndices[0]);
 		}
-		else if (newTriVertOffset == 1)
+		// One vertex lies exactly on the plane
+		else if (numNewVerts == 1)
 		{
-			vertices.push_back(newTriVertices[0]);
+			uint32_t baseIndex = 
+				(projT[0] == 0.0f) * 0 +
+				(projT[1] == 0.0f) * 1 + 
+				(projT[2] == 0.0f) * 2;
 
-			uint32_t loneVertIndex = 0;
-			if (projT[1] == 0.0f)
-				loneVertIndex = 1;
-			else if(projT[2] == 0.0f)
-				loneVertIndex = 2;
-
-			newIndices.push_back(triIndices[loneVertIndex]);
+			// Add 2 new triangles
+			newIndices.push_back(triIndices[baseIndex]);
 			newIndices.push_back(newTriIndices[0]);
-			newIndices.push_back(triIndices[(loneVertIndex + 2) % 3]);
-			newIndices.push_back(triIndices[loneVertIndex]);
-			newIndices.push_back(triIndices[(loneVertIndex + 1) % 3]);
+			newIndices.push_back(triIndices[LOOP_IND(baseIndex + 2)]);
+
+			newIndices.push_back(triIndices[baseIndex]);
+			newIndices.push_back(triIndices[LOOP_IND(baseIndex + 1)]);
 			newIndices.push_back(newTriIndices[0]);
 		}
 	}
+
+	Log::write("Num verts: " + std::to_string(vertices.size()));
+	Log::write("Num ind: " + std::to_string(newIndices.size()));
 
 	// Apply 
 	meshData.getVertices().assign(vertices.begin(), vertices.end());
