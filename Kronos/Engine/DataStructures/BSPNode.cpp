@@ -31,14 +31,14 @@ bool BSPNode::isTriangleDegenerate(
 	outputUnnormalizedNormal = glm::cross(edge0, edge1);
 	float l = glm::dot(outputUnnormalizedNormal, outputUnnormalizedNormal);
 
-	if (l <= 0.0f)
+	/*if (l <= 0.0f)
 	{
 		Log::write(
 			"normal: " + 
 			std::to_string(outputUnnormalizedNormal.x) + ", " + 
 			std::to_string(outputUnnormalizedNormal.y) + ", " + 
 			std::to_string(outputUnnormalizedNormal.z));
-	}
+	}*/
 
 	return l <= 0.0f;
 }
@@ -89,8 +89,8 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		// Only degenerate triangles
 		if (tempIndex == randTriStartIndex)
 		{
-			Log::warning("BSP leaf contains degenerate triangles");
-			this->nodeIndices.assign(indices.begin(), indices.end());
+			Log::warning("BSP leaf is empty because of degenerate triangles");
+			// this->nodeIndices.assign(indices.begin(), indices.end());
 
 			return;
 		}
@@ -105,13 +105,25 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	}
 	randTriStartIndex = tempIndex;
 
-
 	// Plane position
 	this->nodePlane.pos = vertices[indices[randTriStartIndex]].pos;
 
 	// Plane normal
 	normal = glm::normalize(normal);
 	this->nodePlane.normal = normal;
+
+	// Add the chosen triangle to this node, 
+	// and remove it from evaluation
+	for (uint32_t i = 0; i < 3; ++i)
+		this->nodeIndices.push_back(indices[randTriStartIndex + i]);
+	indices.erase(
+		indices.begin() + randTriStartIndex,
+		indices.begin() + randTriStartIndex + 3
+	);
+
+	// No more triangles in this node
+	if (indices.size() <= 0)
+		return;
 
 	// Split into children if needed
 	if (this->depthLevel < 10)
@@ -123,7 +135,8 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	// This node is a leaf
 	if (!this->negativeChild || !this->positiveChild)
 	{
-		this->nodeIndices.assign(indices.begin(), indices.end());
+		for (size_t i = 0; i < indices.size(); ++i)
+			this->nodeIndices.push_back(indices[i]);
 
 		return;
 	}
