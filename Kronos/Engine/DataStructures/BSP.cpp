@@ -27,14 +27,14 @@ void BSP::createFromMeshData(MeshData& meshData)
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(-1.0f, 0.0f, 1.0f)
 	);*/
-	Plane plane(
+	/*Plane plane(
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(1.0f, 0.1f, 1.0f)
-	);
+	);*/
 
 	// Create root node
 	this->deleteRoot();
-	this->rootNode = new BSPNode(0, plane);
+	this->rootNode = new BSPNode(0);
 
 	// Make a copy of the mesh data
 	std::vector<Vertex> vertices = meshData.getVertices();

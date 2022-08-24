@@ -51,8 +51,8 @@ void MeshData::loadOBJ(const std::string& filePath)
 		Vertex& v1 = this->vertices[this->indices[i + 1]];
 		Vertex& v2 = this->vertices[this->indices[i + 2]];
 
-		glm::vec3 edge0 = v1.pos - v0.pos;
-		glm::vec3 edge1 = v2.pos - v0.pos;
+		const glm::vec3 edge0 = v1.pos - v0.pos;
+		const glm::vec3 edge1 = v2.pos - v0.pos;
 
 		glm::vec3 normal = glm::cross(edge0, edge1);
 		normal = glm::normalize(normal);

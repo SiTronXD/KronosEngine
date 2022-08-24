@@ -1,4 +1,5 @@
 #include "BSPNode.h"
+#include "../Dev/Log.h"
 
 #define LOOP_IND(index) ((index) % 3)
 
@@ -15,25 +16,40 @@ bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
 	return (t0 <= 0 && t1 <= 0) || (t0 >= 0 && t1 >= 0);
 }
 
-BSPNode::BSPNode(const uint32_t& depthLevel, const Plane& nodePlane)
-	: nodePlane(nodePlane), 
-	negativeChild(nullptr),
-	positiveChild(nullptr)
+bool BSPNode::isTriangleDegenerate(
+	std::vector<Vertex>& vertices, 
+	const uint32_t& index0, 
+	const uint32_t& index1, 
+	const uint32_t& index2, 
+	glm::vec3& outputUnnormalizedNormal)
 {
-	if (depthLevel < 2)
-	{
-		Plane plane0(
-			glm::vec3(0.0f, 0.1f, 0.0f),
-			glm::vec3(0.0f, 1.0f, 0.0f)
-		);
-		Plane plane1(
-			glm::vec3(0.0f, -0.1f, 0.0f),
-			glm::vec3(0.0f, 1.0f, 0.0f)
-		);
+	const Vertex& v0 = vertices[index0];
+	const Vertex& v1 = vertices[index1];
+	const Vertex& v2 = vertices[index2];
+	const glm::vec3 edge0 = v1.pos - v0.pos;
+	const glm::vec3 edge1 = v2.pos - v0.pos;
+	outputUnnormalizedNormal = glm::cross(edge0, edge1);
+	float l = glm::dot(outputUnnormalizedNormal, outputUnnormalizedNormal);
 
-		this->negativeChild = new BSPNode(depthLevel + 1, plane0);
-		this->positiveChild = new BSPNode(depthLevel + 1, plane1);
+	if (l <= 0.0f)
+	{
+		Log::write(
+			"normal: " + 
+			std::to_string(outputUnnormalizedNormal.x) + ", " + 
+			std::to_string(outputUnnormalizedNormal.y) + ", " + 
+			std::to_string(outputUnnormalizedNormal.z));
 	}
+
+	return l <= 0.0f;
+}
+
+BSPNode::BSPNode(const uint32_t& depthLevel)
+	: nodePlane(glm::vec3(0.0f), glm::vec3(1.0f)),
+	negativeChild(nullptr),
+	positiveChild(nullptr),
+	depthLevel(depthLevel)
+{
+	
 }
 
 BSPNode::~BSPNode()
@@ -46,6 +62,64 @@ BSPNode::~BSPNode()
 
 void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
 {
+	// No triangles in this node
+	if (indices.size() <= 0)
+		return;
+
+	// Pick an appropriate triangle
+	float randomT = (float) rand() / RAND_MAX;
+	uint32_t randTriStartIndex =
+		((uint32_t)(randomT * (indices.size() / 3 - 1)) * 3);
+
+	uint32_t tempIndex = randTriStartIndex;
+	glm::vec3 normal = glm::vec3(0.0f);
+	bool triDeg = this->isTriangleDegenerate(
+		vertices,
+		indices[tempIndex + 0],
+		indices[tempIndex + 1],
+		indices[tempIndex + 2],
+		normal
+	);
+
+	// Found degenerate triangle, pick another one
+	while (triDeg)
+	{
+		tempIndex = (tempIndex + 3) % indices.size();
+
+		// Only degenerate triangles
+		if (tempIndex == randTriStartIndex)
+		{
+			Log::warning("BSP leaf contains degenerate triangles");
+			this->nodeIndices.assign(indices.begin(), indices.end());
+
+			return;
+		}
+
+		triDeg = this->isTriangleDegenerate(
+			vertices,
+			indices[tempIndex + 0],
+			indices[tempIndex + 1],
+			indices[tempIndex + 2],
+			normal
+		);
+	}
+	randTriStartIndex = tempIndex;
+
+
+	// Plane position
+	this->nodePlane.pos = vertices[indices[randTriStartIndex]].pos;
+
+	// Plane normal
+	normal = glm::normalize(normal);
+	this->nodePlane.normal = normal;
+
+	// Split into children if needed
+	if (this->depthLevel < 10)
+	{
+		this->negativeChild = new BSPNode(this->depthLevel + 1);
+		this->positiveChild = new BSPNode(this->depthLevel + 1);
+	}
+
 	// This node is a leaf
 	if (!this->negativeChild || !this->positiveChild)
 	{
@@ -215,7 +289,27 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		}
 	}
 
-	// Split into children
+	glm::vec3 randCol0 = glm::vec3(
+		(float) rand() / RAND_MAX,
+		(float) rand() / RAND_MAX,
+		(float) rand() / RAND_MAX
+	);
+	glm::vec3 randCol1 = glm::vec3(
+		(float)rand() / RAND_MAX,
+		(float)rand() / RAND_MAX,
+		(float)rand() / RAND_MAX
+	);
+	for (size_t i = 0; i < negativeSpaceIndices.size(); ++i)
+	{
+		Vertex& v = vertices[negativeSpaceIndices[i]];
+		v.color = randCol0;
+	}
+	for (size_t i = 0; i < positiveSpaceIndices.size(); ++i)
+	{
+		Vertex& v = vertices[positiveSpaceIndices[i]];
+		v.color = randCol1;
+	}
+
 	this->negativeChild->splitMesh(vertices, negativeSpaceIndices);
 	this->positiveChild->splitMesh(vertices, positiveSpaceIndices);
 }
