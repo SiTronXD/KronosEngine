@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\DataStructures\BSPNode.cpp" />
     <ClCompile Include="Engine\DataStructures\BSP.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\DebugMessenger.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Device.cpp" />
@@ -119,6 +120,7 @@
     <ClCompile Include="Engine\Graphics\MeshData.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\DataStructures\BSPNode.h" />
     <ClInclude Include="Engine\DataStructures\BSP.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\DebugMessenger.h" />
     <ClInclude Include="Engine\Graphics\Vulkan\Device.h" />
