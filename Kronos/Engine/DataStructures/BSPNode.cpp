@@ -1,11 +1,19 @@
 #include "BSPNode.h"
 #include "../Dev/Log.h"
 
+//#define RENDER_SEPARATE_NODE_COLORS
+#define MESH_CONVEX_EPSILON 0.00001f
+
 #define LOOP_IND(index) ((index) % 3)
 
 float BSPNode::projectPointOnNormal(const Vertex& v, const Plane& plane)
 {
-	glm::vec3 planeToVert = v.pos - plane.pos;
+	return this->projectPointOnNormal(v.pos, plane);
+}
+
+float BSPNode::projectPointOnNormal(const glm::vec3& p, const Plane& plane)
+{
+	glm::vec3 planeToVert = p - plane.pos;
 	float t = glm::dot(planeToVert, plane.normal);
 
 	return t;
@@ -41,6 +49,51 @@ bool BSPNode::isTriangleDegenerate(
 	}*/
 
 	return l <= 0.0f;
+}
+
+bool BSPNode::isMeshConvex(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+{
+	glm::vec3 tempNormal(1.0f);
+	Plane tempPlane(glm::vec3(0.0f), glm::vec3(1.0f));
+	for (size_t i = 0; i < indices.size(); i += 3)
+	{
+		// Ignore degenerate triangles
+		if (this->isTriangleDegenerate(
+			vertices,
+			indices[i + 0],
+			indices[i + 1],
+			indices[i + 2],
+			tempNormal))
+		{
+			continue;
+		}
+
+		// Normal and plane
+		//tempNormal = glm::normalize(tempNormal);
+		tempPlane.pos = vertices[indices[i + 0]].pos;
+		tempPlane.normal = tempNormal;
+
+		// Loop through the other triangles
+		for (size_t j = 0; j < indices.size(); j += 3)
+		{
+			// Don't evauluate itself
+			if (i == j)
+				continue;
+
+			float projT[3] =
+			{
+				this->projectPointOnNormal(vertices[indices[j + 0]], tempPlane),
+				this->projectPointOnNormal(vertices[indices[j + 1]], tempPlane),
+				this->projectPointOnNormal(vertices[indices[j + 2]], tempPlane),
+			};
+
+			// One triangle is in front of plane, this mesh is not convex
+			if (projT[0] > MESH_CONVEX_EPSILON || projT[1] > MESH_CONVEX_EPSILON || projT[2] > MESH_CONVEX_EPSILON)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 BSPNode::BSPNode(const uint32_t& depthLevel)
@@ -112,6 +165,20 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	normal = glm::normalize(normal);
 	this->nodePlane.normal = normal;
 
+	/*switch (this->depthLevel % 3)
+	{
+	case 0:
+		normal = glm::vec3(1.0f, 0.0f, 0.0f);
+		break;
+	case 1:
+		normal = glm::vec3(0.0f, 1.0f, 0.0f);
+		break;
+	case 2:
+		normal = glm::vec3(0.0f, 0.0f, 1.0f);
+		break;
+	}
+	this->nodePlane.normal = normal;*/
+
 	// Add the chosen triangle to this node, 
 	// and remove it from evaluation
 	for (uint32_t i = 0; i < 3; ++i)
@@ -126,15 +193,15 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		return;
 
 	// Split into children if needed
-	if (this->depthLevel < 10)
+	if(!this->isMeshConvex(vertices, indices))//if (this->depthLevel < 10)
 	{
 		this->negativeChild = new BSPNode(this->depthLevel + 1);
 		this->positiveChild = new BSPNode(this->depthLevel + 1);
 	}
-
 	// This node is a leaf
-	if (!this->negativeChild || !this->positiveChild)
+	else 
 	{
+		// Add all triangles to this node and exit
 		for (size_t i = 0; i < indices.size(); ++i)
 			this->nodeIndices.push_back(indices[i]);
 
@@ -167,12 +234,14 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			this->projectPointOnNormal(vertices[triIndices[2]], this->nodePlane),
 		};
 
-		if (projT[0] == 0.0f)
-			vertices[triIndices[0]].color = debugColor;
-		if (projT[1] == 0.0f)
-			vertices[triIndices[1]].color = debugColor;
-		if (projT[2] == 0.0f)
-			vertices[triIndices[2]].color = debugColor;
+		#ifdef RENDER_SEPARATE_NODE_COLORS
+			if (projT[0] == 0.0f)
+				vertices[triIndices[0]].color = debugColor;
+			if (projT[1] == 0.0f)
+				vertices[triIndices[1]].color = debugColor;
+			if (projT[2] == 0.0f)
+				vertices[triIndices[2]].color = debugColor;
+		#endif
 
 		// All points lie on the plane
 		if (projT[0] == 0.0f && projT[1] == 0.0f && projT[2] == 0.0f)
@@ -228,7 +297,10 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 					v1,
 					t
 				);
-				newVert.color = debugColor;
+
+				#ifdef RENDER_SEPARATE_NODE_COLORS
+					newVert.color = debugColor;
+				#endif
 
 				// Add new vertex
 				vertices.push_back(newVert);
@@ -302,26 +374,29 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		}
 	}
 
-	glm::vec3 randCol0 = glm::vec3(
-		(float) rand() / RAND_MAX,
-		(float) rand() / RAND_MAX,
-		(float) rand() / RAND_MAX
-	);
-	glm::vec3 randCol1 = glm::vec3(
-		(float)rand() / RAND_MAX,
-		(float)rand() / RAND_MAX,
-		(float)rand() / RAND_MAX
-	);
-	for (size_t i = 0; i < negativeSpaceIndices.size(); ++i)
-	{
-		Vertex& v = vertices[negativeSpaceIndices[i]];
-		v.color = randCol0;
-	}
-	for (size_t i = 0; i < positiveSpaceIndices.size(); ++i)
-	{
-		Vertex& v = vertices[positiveSpaceIndices[i]];
-		v.color = randCol1;
-	}
+
+	#ifdef RENDER_SEPARATE_NODE_COLORS
+		glm::vec3 randCol0 = glm::vec3(
+			(float) rand() / RAND_MAX,
+			(float) rand() / RAND_MAX,
+			(float) rand() / RAND_MAX
+		);
+		glm::vec3 randCol1 = glm::vec3(
+			(float)rand() / RAND_MAX,
+			(float)rand() / RAND_MAX,
+			(float)rand() / RAND_MAX
+		);
+		for (size_t i = 0; i < negativeSpaceIndices.size(); ++i)
+		{
+			Vertex& v = vertices[negativeSpaceIndices[i]];
+			v.color = randCol0;
+		}
+		for (size_t i = 0; i < positiveSpaceIndices.size(); ++i)
+		{
+			Vertex& v = vertices[positiveSpaceIndices[i]];
+			v.color = randCol1;
+		}
+	#endif
 
 	this->negativeChild->splitMesh(vertices, negativeSpaceIndices);
 	this->positiveChild->splitMesh(vertices, positiveSpaceIndices);
@@ -338,4 +413,30 @@ void BSPNode::getMergedIndices(std::vector<uint32_t>& outputIndices)
 	// This node indices
 	for (size_t i = 0; i < this->nodeIndices.size(); ++i)
 		outputIndices.push_back(this->nodeIndices[i]);
+}
+
+void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos)
+{
+	// Leaf node
+	if (!this->negativeChild && !this->positiveChild)
+	{
+		for (size_t i = 0; i < this->nodeIndices.size(); ++i)
+			outputIndices.push_back(this->nodeIndices[i]);
+
+		return;
+	}
+
+	BSPNode* firstNode = this->positiveChild;
+	BSPNode* secondNode = this->negativeChild;
+	if (this->projectPointOnNormal(camPos, this->nodePlane) > 0.0f)
+	{
+		firstNode = this->negativeChild;
+		secondNode = this->positiveChild;
+	}
+
+
+	firstNode->traverseBackToFront(outputIndices, camPos);
+	for (size_t i = 0; i < this->nodeIndices.size(); ++i)
+		outputIndices.push_back(this->nodeIndices[i]);
+	secondNode->traverseBackToFront(outputIndices, camPos);
 }

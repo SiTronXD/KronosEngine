@@ -19,19 +19,6 @@ BSP::~BSP()
 
 void BSP::createFromMeshData(MeshData& meshData)
 {
-	/*Plane plane(
-		glm::vec3(0.35f, 0.0f, 0.35f),
-		glm::vec3(1.0f, 0.0f, 1.0f)
-	);*/
-	/*Plane plane(
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(-1.0f, 0.0f, 1.0f)
-	);*/
-	/*Plane plane(
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(1.0f, 0.1f, 1.0f)
-	);*/
-
 	// Create root node
 	this->deleteRoot();
 	this->rootNode = new BSPNode(0);
@@ -55,4 +42,13 @@ void BSP::createFromMeshData(MeshData& meshData)
 	// Apply 
 	meshData.getVertices().assign(vertices.begin(), vertices.end());
 	meshData.getIndices().assign(newIndices.begin(), newIndices.end());
+}
+
+void BSP::traverseTree(MeshData& meshData, const glm::vec3& camPos)
+{
+	// New indices for this frame
+	meshData.getIndices().clear();
+
+	// Fill new indices by traversing tree
+	this->rootNode->traverseBackToFront(meshData.getIndices(), camPos);
 }

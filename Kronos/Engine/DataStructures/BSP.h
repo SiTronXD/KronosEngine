@@ -14,4 +14,5 @@ public:
 	~BSP();
 
 	void createFromMeshData(MeshData& meshData);
+	void traverseTree(MeshData& meshData, const glm::vec3& camPos);
 };

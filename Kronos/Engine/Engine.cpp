@@ -59,6 +59,9 @@ void Engine::init()
 	MeshData meshData;
 	meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
 	//meshData.loadOBJ("Resources/Models/sphereTest.obj");
+	//meshData.loadOBJ("Resources/Models/lowResSphere.obj");
+	//meshData.loadOBJ("Resources/Models/lowResThreeSpheres.obj");
+	//meshData.loadOBJ("Resources/Models/torus.obj");
 	//meshData.create(quadsVertices, quadsIndices);
 
 	// BSP to render mesh with
@@ -79,6 +82,11 @@ void Engine::init()
 
 		// "Game logic"
 		camera.update();
+		bsp.traverseTree(meshData, camera.getPosition());
+		mesh.getIndexBuffer().updateIndexBuffer(
+			meshData.getIndices(), 
+			this->renderer.getCurrentFrameIndex()
+		);
 
 		// Render
 		// TODO: change to scene submission rather
