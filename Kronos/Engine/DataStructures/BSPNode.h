@@ -41,6 +41,11 @@ private:
 		std::vector<Vertex>& vertices,
 		std::vector<uint32_t>& indices
 	);
+	bool foundTriangle(
+		std::vector<Vertex>& vertices,
+		std::vector<uint32_t>& indices, 
+		uint32_t& triStartIndex,
+		glm::vec3& outputUnnormalizedNormal);
 
 public:
 	BSPNode(const uint32_t& depthLevel);
@@ -49,4 +54,7 @@ public:
 	void splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
 	void getMergedIndices(std::vector<uint32_t>& outputIndices);
 	void traverseBackToFront(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos);
+	void traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos);
+
+	void getTreeDepth(uint32_t& value);
 };

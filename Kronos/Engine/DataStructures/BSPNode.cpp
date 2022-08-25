@@ -2,7 +2,7 @@
 #include "../Dev/Log.h"
 
 //#define RENDER_SEPARATE_NODE_COLORS
-#define MESH_CONVEX_EPSILON 0.00001f
+#define MESH_CONVEX_EPSILON 0.1f
 
 #define LOOP_IND(index) ((index) % 3)
 
@@ -69,7 +69,7 @@ bool BSPNode::isMeshConvex(std::vector<Vertex>& vertices, std::vector<uint32_t>&
 		}
 
 		// Normal and plane
-		//tempNormal = glm::normalize(tempNormal);
+		tempNormal = glm::normalize(tempNormal);
 		tempPlane.pos = vertices[indices[i + 0]].pos;
 		tempPlane.normal = tempNormal;
 
@@ -92,6 +92,52 @@ bool BSPNode::isMeshConvex(std::vector<Vertex>& vertices, std::vector<uint32_t>&
 				return false;
 		}
 	}
+
+	return true;
+}
+
+bool BSPNode::foundTriangle(
+	std::vector<Vertex>& vertices,
+	std::vector<uint32_t>& indices,
+	uint32_t& triStartIndex,
+	glm::vec3& outputUnnormalizedNormal)
+{
+	float randomT = (float)rand() / RAND_MAX;
+	triStartIndex =
+		((uint32_t)(randomT * (indices.size() / 3 - 1)) * 3);
+
+	uint32_t tempIndex = triStartIndex;
+	bool triDeg = this->isTriangleDegenerate(
+		vertices,
+		indices[tempIndex + 0],
+		indices[tempIndex + 1],
+		indices[tempIndex + 2],
+		outputUnnormalizedNormal
+	);
+
+	// Found degenerate triangle, pick another one
+	while (triDeg)
+	{
+		tempIndex = (tempIndex + 3) % indices.size();
+
+		// Only degenerate triangles
+		if (tempIndex == triStartIndex)
+		{
+			Log::warning("BSP leaf is empty because of degenerate triangles");
+			// this->nodeIndices.assign(indices.begin(), indices.end());
+
+			return false;
+		}
+
+		triDeg = this->isTriangleDegenerate(
+			vertices,
+			indices[tempIndex + 0],
+			indices[tempIndex + 1],
+			indices[tempIndex + 2],
+			outputUnnormalizedNormal
+		);
+	}
+	triStartIndex = tempIndex;
 
 	return true;
 }
@@ -119,47 +165,14 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	if (indices.size() <= 0)
 		return;
 
-	// Pick an appropriate triangle
-	float randomT = (float) rand() / RAND_MAX;
-	uint32_t randTriStartIndex =
-		((uint32_t)(randomT * (indices.size() / 3 - 1)) * 3);
-
-	uint32_t tempIndex = randTriStartIndex;
+	// Pick an appropriate triangle if possible
+	uint32_t triStartIndex = 0;
 	glm::vec3 normal = glm::vec3(0.0f);
-	bool triDeg = this->isTriangleDegenerate(
-		vertices,
-		indices[tempIndex + 0],
-		indices[tempIndex + 1],
-		indices[tempIndex + 2],
-		normal
-	);
-
-	// Found degenerate triangle, pick another one
-	while (triDeg)
-	{
-		tempIndex = (tempIndex + 3) % indices.size();
-
-		// Only degenerate triangles
-		if (tempIndex == randTriStartIndex)
-		{
-			Log::warning("BSP leaf is empty because of degenerate triangles");
-			// this->nodeIndices.assign(indices.begin(), indices.end());
-
-			return;
-		}
-
-		triDeg = this->isTriangleDegenerate(
-			vertices,
-			indices[tempIndex + 0],
-			indices[tempIndex + 1],
-			indices[tempIndex + 2],
-			normal
-		);
-	}
-	randTriStartIndex = tempIndex;
+	if (!this->foundTriangle(vertices, indices, triStartIndex, normal))
+		return;
 
 	// Plane position
-	this->nodePlane.pos = vertices[indices[randTriStartIndex]].pos;
+	this->nodePlane.pos = vertices[indices[triStartIndex]].pos;
 
 	// Plane normal
 	normal = glm::normalize(normal);
@@ -182,10 +195,10 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	// Add the chosen triangle to this node, 
 	// and remove it from evaluation
 	for (uint32_t i = 0; i < 3; ++i)
-		this->nodeIndices.push_back(indices[randTriStartIndex + i]);
+		this->nodeIndices.push_back(indices[triStartIndex + i]);
 	indices.erase(
-		indices.begin() + randTriStartIndex,
-		indices.begin() + randTriStartIndex + 3
+		indices.begin() + triStartIndex,
+		indices.begin() + triStartIndex + 3
 	);
 
 	// No more triangles in this node
@@ -439,4 +452,42 @@ void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const gl
 	for (size_t i = 0; i < this->nodeIndices.size(); ++i)
 		outputIndices.push_back(this->nodeIndices[i]);
 	secondNode->traverseBackToFront(outputIndices, camPos);
+}
+
+void BSPNode::traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos)
+{
+	// Leaf node
+	if (!this->negativeChild && !this->positiveChild)
+	{
+		for (size_t i = 0; i < this->nodeIndices.size(); ++i)
+			outputIndices.push_back(this->nodeIndices[i]);
+
+		return;
+	}
+
+	BSPNode* firstNode = this->negativeChild;
+	BSPNode* secondNode = this->positiveChild;
+	if (this->projectPointOnNormal(camPos, this->nodePlane) > 0.0f)
+	{
+		firstNode = this->positiveChild;
+		secondNode = this->negativeChild;
+	}
+
+
+	firstNode->traverseFrontToBack(outputIndices, camPos);
+	for (size_t i = 0; i < this->nodeIndices.size(); ++i)
+		outputIndices.push_back(this->nodeIndices[i]);
+	secondNode->traverseFrontToBack(outputIndices, camPos);
+}
+
+void BSPNode::getTreeDepth(uint32_t& value)
+{
+	if (!this->negativeChild && !this->positiveChild)
+	{
+		value = max(value, this->depthLevel);
+		return;
+	}
+
+	this->negativeChild->getTreeDepth(value);
+	this->positiveChild->getTreeDepth(value);
 }
