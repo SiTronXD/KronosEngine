@@ -19,6 +19,9 @@ BSP::~BSP()
 
 void BSP::createFromMeshData(MeshData& meshData)
 {
+	uint32_t numOriginalVerts = meshData.getVertices().size();
+	uint32_t numOriginalInd = meshData.getIndices().size();
+
 	// Create root node
 	this->deleteRoot();
 	this->rootNode = new BSPNode(0);
@@ -36,8 +39,15 @@ void BSP::createFromMeshData(MeshData& meshData)
 	this->rootNode->getMergedIndices(newIndices);
 
 	// Write
-	Log::write("Num verts: " + std::to_string(vertices.size()));
-	Log::write("Num ind: " + std::to_string(newIndices.size()));
+	Log::write("");
+	Log::write("Before BSP creation:");
+	Log::write("Num vertices: " + std::to_string(numOriginalVerts));
+	Log::write("Num indices: " + std::to_string(numOriginalInd));
+	Log::write("Num triangles: " + std::to_string(numOriginalInd / 3) + "\n");
+	Log::write("After BSP creation:");
+	Log::write("Num vertices: " + std::to_string(vertices.size()));
+	Log::write("Num indices: " + std::to_string(newIndices.size()));
+	Log::write("Num triangles: " + std::to_string(newIndices.size() / 3) + "\n");
 
 	// Apply 
 	meshData.getVertices().assign(vertices.begin(), vertices.end());
