@@ -52,6 +52,8 @@ void Window::init(Renderer& renderer, int width, int height)
 
 void Window::update()
 {
+	Input::updateLastKeys();
+
 	glfwPollEvents();
 
 	// Close when clicking escape

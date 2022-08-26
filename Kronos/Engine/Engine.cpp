@@ -57,7 +57,7 @@ void Engine::init()
 
 	// Mesh data to render
 	MeshData meshData;
-	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
+	meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
 	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
 	//meshData.loadOBJ("Resources/Models/sphereTest.obj");
 	//meshData.loadOBJ("Resources/Models/lowResSphere.obj");
@@ -98,6 +98,8 @@ void Engine::init()
 	Mesh mesh(this->renderer);
 	mesh.createMesh(meshData, true);
 
+	bool wireframe = false;
+
 	// Main loop
 	Time::init();
 	while (this->window.isRunning())
@@ -108,11 +110,17 @@ void Engine::init()
 
 		// "Game logic"
 		camera.update();
-		bsp->traverseTree(meshData, camera.getPosition());
+		bsp.traverseTree(meshData, camera.getPosition());
 		mesh.getIndexBuffer().updateIndexBuffer(
 			meshData.getIndices(), 
 			this->renderer.getCurrentFrameIndex()
 		);
+
+		if (Input::isKeyPressed(Keys::R))
+		{
+			wireframe = !wireframe;
+			renderer.setToWireframe(wireframe);
+		}
 
 		// Render
 		// TODO: change to scene submission rather

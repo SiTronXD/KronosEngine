@@ -87,6 +87,8 @@ public:
 
 	void drawFrame(Camera& camera, Mesh& mesh);
 
+	void setToWireframe(bool wireframe);
+
 	// Vulkan
 	inline VkInstance& getVkInstance() { return this->instance.getVkInstance(); }
 	inline VkPhysicalDevice& getVkPhysicalDevice() { return this->physicalDevice.getVkPhysicalDevice(); }

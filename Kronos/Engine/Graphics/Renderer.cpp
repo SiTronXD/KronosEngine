@@ -270,6 +270,19 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	this->currentFrameIndex = (this->currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void Renderer::setToWireframe(bool wireframe)
+{
+	vkDeviceWaitIdle(this->getVkDevice());
+
+	this->graphicsPipeline.cleanup();
+	this->graphicsPipeline.createGraphicsPipeline(
+		this->graphicsPipelineLayout,
+		this->renderPass,
+		wireframe
+	);
+	Log::write("WIREFRAME!!!!");
+}
+
 void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 {
 	// Delta time

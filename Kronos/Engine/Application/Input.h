@@ -49,6 +49,7 @@ private:
 	friend class Window;
 
 	static bool keyDown[GLFW_MAX_NUM_KEYS];
+	static bool lastKeyDown[GLFW_MAX_NUM_KEYS];
 	static bool mouseButtonDown[GLFW_MAX_NUM_MOUSE_BUTTONS];
 
 	static float cursorX;
@@ -56,13 +57,15 @@ private:
 	static float lastCursorX;
 	static float lastCursorY;
 
-	static void setCursor(const float& newCursorX, const float& newCursorY);
-
-public:
 	static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	static void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
+	static void setCursor(const float& newCursorX, const float& newCursorY);
+	static void updateLastKeys();
+
+public:
 	static inline bool isKeyDown(const Keys& key) { return Input::keyDown[(int) key]; }
+	static inline bool isKeyPressed(const Keys& key) { return Input::keyDown[(int)key] && !Input::lastKeyDown[(int)key]; }
 	static inline bool isMouseButtonDown(const Mouse& mouse) { return mouseButtonDown[(int) mouse]; }
 	static inline const float getMouseDeltaX() { return Input::lastCursorX - Input::cursorX; }
 	static inline const float getMouseDeltaY() { return Input::lastCursorY - Input::cursorY; }
