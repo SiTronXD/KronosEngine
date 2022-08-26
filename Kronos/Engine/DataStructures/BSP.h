@@ -15,4 +15,6 @@ public:
 
 	void createFromMeshData(MeshData& meshData);
 	void traverseTree(MeshData& meshData, const glm::vec3& camPos);
+
+	uint32_t getTreeDepth();
 };

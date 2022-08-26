@@ -38,10 +38,6 @@ void BSP::createFromMeshData(MeshData& meshData)
 	newIndices.reserve(indices.size());
 	this->rootNode->getMergedIndices(newIndices);
 
-	// Get tree depth
-	uint32_t treeDepth = 0;
-	this->rootNode->getTreeDepth(treeDepth);
-
 	// Write
 	Log::write("");
 	Log::write("Before BSP creation:");
@@ -52,7 +48,7 @@ void BSP::createFromMeshData(MeshData& meshData)
 	Log::write("Num vertices: " + std::to_string(vertices.size()));
 	Log::write("Num indices: " + std::to_string(newIndices.size()));
 	Log::write("Num triangles: " + std::to_string(newIndices.size() / 3) + "\n");
-	Log::write("BSP tree depth: " + std::to_string(treeDepth));
+	Log::write("BSP tree depth: " + std::to_string(this->getTreeDepth()));
 
 	// Apply 
 	meshData.getVertices().assign(vertices.begin(), vertices.end());
@@ -66,4 +62,12 @@ void BSP::traverseTree(MeshData& meshData, const glm::vec3& camPos)
 
 	// Fill new indices by traversing tree
 	this->rootNode->traverseBackToFront(meshData.getIndices(), camPos);
+}
+
+uint32_t BSP::getTreeDepth()
+{
+	uint32_t treeDepth = 0;
+	this->rootNode->getTreeDepth(treeDepth);
+
+	return treeDepth;
 }
