@@ -52,6 +52,8 @@ private:
 	DescriptorPool descriptorPool;
 	DescriptorSetArray descriptorSets;
 
+	DescriptorPool imguiDescriptorPool;
+
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
@@ -101,6 +103,7 @@ public:
 	inline RenderPass& getRenderPass() { return this->renderPass; }
 	inline Swapchain& getSwapchain() { return this->swapchain; }
 	inline Window& getWindow() { return *this->window; }
+	inline DescriptorPool& getImguiDescriptorPool() { return this->imguiDescriptorPool; }
 
 	inline float getSwapchainAspectRatio() 
 		{ return (float) this->swapchain.getWidth() / this->swapchain.getHeight(); }

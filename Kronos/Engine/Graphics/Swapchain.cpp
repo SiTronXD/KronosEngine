@@ -98,7 +98,8 @@ Swapchain::Swapchain(Renderer& renderer)
 	depthTexture(renderer),
 	swapchain(VK_NULL_HANDLE),
 	imageFormat(VK_FORMAT_A1R5G5B5_UNORM_PACK16),
-	extent(VkExtent2D{})
+	extent(VkExtent2D{}),
+	minImageCount(0)
 {
 }
 
@@ -125,7 +126,8 @@ void Swapchain::createSwapchain()
 	this->chooseSwapExtent(swapchainSupport.capabilities, extent);
 
 	// Image count
-	uint32_t imageCount = swapchainSupport.capabilities.minImageCount + 1;
+	this->minImageCount = swapchainSupport.capabilities.minImageCount;
+	uint32_t imageCount = minImageCount + 1;
 	if (swapchainSupport.capabilities.maxImageCount > 0 && imageCount > swapchainSupport.capabilities.maxImageCount)
 	{
 		imageCount = swapchainSupport.capabilities.maxImageCount;

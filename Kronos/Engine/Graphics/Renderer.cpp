@@ -73,6 +73,8 @@ void Renderer::initVulkan()
 		this->uniformBuffers,
 		this->texture);
 
+	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+
 	this->createSyncObjects();
 }
 
@@ -82,6 +84,7 @@ void Renderer::cleanup()
 
 	this->texture.cleanup();
 
+	this->imguiDescriptorPool.cleanup();
 	this->descriptorPool.cleanup();
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
@@ -399,6 +402,7 @@ Renderer::Renderer()
 	commandBuffers(*this, commandPool),
 	descriptorPool(*this),
 	descriptorSets(*this),
+	imguiDescriptorPool(*this),
 	swapchain(*this)
 {
 }

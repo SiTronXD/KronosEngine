@@ -4,6 +4,10 @@
 #include "Graphics/Mesh.h"
 #include "DataStructures/BSP.h"
 
+/*#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_vulkan.h>*/
+
 /*
 std::vector<Vertex> quadsVertices =
 {
@@ -99,6 +103,28 @@ void Engine::init()
 	mesh.createMesh(meshData, true);
 
 	bool wireframe = false;
+
+	// Imgui
+	/*IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void) io;
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplGlfw_InitForVulkan(window.getWindowHandle(), true);
+	ImGui_ImplVulkan_InitInfo initInfo = {};
+	initInfo.Instance = renderer.getVkInstance();
+	initInfo.PhysicalDevice = renderer.getVkPhysicalDevice();
+	initInfo.Device = renderer.getVkDevice();
+	initInfo.QueueFamily = renderer.getQueueFamilies().getIndices().graphicsFamily.value();
+	initInfo.Queue = renderer.getQueueFamilies().getVkGraphicsQueue();
+	initInfo.PipelineCache = VK_NULL_HANDLE;
+	initInfo.DescriptorPool = renderer.getImguiDescriptorPool().getVkDescriptorPool();
+	initInfo.Allocator = nullptr;
+	initInfo.MinImageCount = renderer.getSwapchain().getMinImageCount();
+	initInfo.ImageCount = renderer.getSwapchain().getImageCount();
+	initInfo.CheckVkResultFn = ;
+	ImGui_ImplVulkan_Init(&initInfo, );*/
 
 	// Main loop
 	Time::init();

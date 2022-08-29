@@ -26,6 +26,8 @@ private:
 
 	Renderer& renderer;
 
+	uint32_t minImageCount;
+
 	void createImageViews();
 
 	void chooseSwapSurfaceFormat(
@@ -58,4 +60,6 @@ public:
 	inline const VkFramebuffer& getVkFramebuffer(const uint32_t& index) { return this->framebuffers[index]; }
 	inline const uint32_t& getWidth() const { return this->extent.width; }
 	inline const uint32_t& getHeight() const { return this->extent.height; }
+	inline const uint32_t& getMinImageCount() const { return this->minImageCount; }
+	inline const size_t getImageCount() const { return this->images.size(); }
 };

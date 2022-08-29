@@ -16,6 +16,7 @@ public:
 	~DescriptorPool();
 
 	void createDescriptorPool(uint32_t descriptorCount);
+	void createImguiDescriptorPool(uint32_t descriptorCount);
 
 	void cleanup();
 
