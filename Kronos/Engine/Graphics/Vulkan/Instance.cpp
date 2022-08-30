@@ -16,6 +16,7 @@ Instance::~Instance()
 
 void Instance::createInstance(
 	bool enableValidationLayers,
+	bool enablePrintingBestPractices,
 	const std::vector<const char*>& validationLayers,
 	Window* window)
 {
@@ -46,6 +47,17 @@ void Instance::createInstance(
 	// Validation layer debug info for specifically instance create/destroy
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 
+	// Validation features extension for printing best practices
+	const std::vector<VkValidationFeatureEnableEXT> validationFeatureEnables =
+	{
+		VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT
+	};
+	VkValidationFeaturesEXT validationFeatures{};
+	validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+	validationFeatures.enabledValidationFeatureCount = static_cast<uint32_t>(validationFeatureEnables.size());
+	validationFeatures.pEnabledValidationFeatures = validationFeatureEnables.data();
+	validationFeatures.disabledValidationFeatureCount = 0;
+
 	// Validation layers
 	if (enableValidationLayers)
 	{
@@ -55,6 +67,10 @@ void Instance::createInstance(
 		// Validation layer debug info for specifically instance create/destroy
 		DebugMessenger::populateDebugMessengerCreateInfo(debugCreateInfo);
 		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+
+		// Print best practices
+		if(enablePrintingBestPractices)
+			debugCreateInfo.pNext = &validationFeatures;
 	}
 	else
 	{

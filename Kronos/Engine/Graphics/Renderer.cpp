@@ -18,14 +18,17 @@ const std::vector<const char*> deviceExtensions =
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
+const bool enablePrintingBestPractices = false;
 #else
 const bool enableValidationLayers = true;
+const bool enablePrintingBestPractices = false;
 #endif
 
 void Renderer::initVulkan()
 {
 	this->instance.createInstance(
 		enableValidationLayers, 
+		enablePrintingBestPractices,
 		validationLayers, 
 		this->window
 	);

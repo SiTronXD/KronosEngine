@@ -15,7 +15,8 @@ public:
 	~Instance();
 
 	void createInstance(
-		bool enableValidationLayers, 
+		bool enableValidationLayers,
+		bool enablePrintingBestPractices,
 		const std::vector<const char*>& validationLayers,
 		Window* window);
 
