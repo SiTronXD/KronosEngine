@@ -13,8 +13,7 @@ const std::vector<const char*> validationLayers =
 
 const std::vector<const char*> deviceExtensions =
 {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_KHR_MAINTENANCE1_EXTENSION_NAME // Negative viewport height
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 #ifdef NDEBUG
