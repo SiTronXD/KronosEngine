@@ -17,6 +17,7 @@ Instance::~Instance()
 void Instance::createInstance(
 	bool enableValidationLayers,
 	bool enablePrintingBestPractices,
+	const std::vector<const char*>& instanceExtensions,
 	const std::vector<const char*>& validationLayers,
 	Window* window)
 {
@@ -39,8 +40,11 @@ void Instance::createInstance(
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 
-	// Get and set extensions
+	// Get, add and set extensions
 	auto extensions = SupportChecker::getRequiredExtensions(*window, enableValidationLayers);
+	for (size_t i = 0; i < instanceExtensions.size(); ++i)
+		extensions.push_back(instanceExtensions[i]);
+
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	createInfo.ppEnabledExtensionNames = extensions.data();
 
