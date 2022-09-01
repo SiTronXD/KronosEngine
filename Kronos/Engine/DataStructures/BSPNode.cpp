@@ -3,8 +3,9 @@
 #include "../Dev/Log.h"
 
 //#define RENDER_SEPARATE_NODE_COLORS
-#define MESH_CONVEX_EPSILON 0.1f
-#define COMPARE_SIDE_EPSILON 0.0f
+#define MESH_CONVEX_EPSILON 0.001f
+#define COMPARE_SIDE_EPSILON 0.001f
+#define PICK_GOOD_TRIANGLE
 
 #define LOOP_IND(index) ((index) % 3)
 
@@ -19,6 +20,26 @@ float BSPNode::projectPointOnNormal(const glm::vec3& p, const Plane& plane)
 	float t = glm::dot(planeToVert, plane.normal);
 
 	return t;
+}
+
+bool BSPNode::isZero(const float& x)
+{
+	// if(abs(x - y) <= epsilon * max(abs(x), abs(y), 1.0f))
+	return std::abs(x) <= COMPARE_SIDE_EPSILON * max(std::abs(x), 1.0f);
+}
+
+bool BSPNode::isLargerThanZero(const float& x)
+{
+	//return x >= -COMPARE_SIDE_EPSILON;
+	
+	return x >= -COMPARE_SIDE_EPSILON * max(abs(x), 1.0f);
+}
+
+bool BSPNode::isLessThanZero(const float& x)
+{
+	//return x <= COMPARE_SIDE_EPSILON;
+
+	return x <= COMPARE_SIDE_EPSILON * max(abs(x), 1.0f);
 }
 
 bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
@@ -92,6 +113,8 @@ bool BSPNode::isMeshConvex(std::vector<Vertex>& vertices, std::vector<uint32_t>&
 			// One triangle is in front of plane, this mesh is not convex
 			if (projT[0] > MESH_CONVEX_EPSILON || projT[1] > MESH_CONVEX_EPSILON || projT[2] > MESH_CONVEX_EPSILON)
 				return false;
+			/*if (this->isLargerThanZero(projT[0]) || this->isLargerThanZero(projT[1]) || this->isLargerThanZero(projT[2]))
+				return false;*/
 		}
 	}
 
@@ -104,6 +127,9 @@ bool BSPNode::foundTriangle(
 	uint32_t& triStartIndex,
 	glm::vec3& outputUnnormalizedNormal)
 {
+#ifndef PICK_GOOD_TRIANGLE
+
+	// Try a random triangle
 	float randomT = (float)rand() / RAND_MAX;
 	triStartIndex =
 		((uint32_t)(randomT * (indices.size() / 3 - 1)) * 3);
@@ -140,8 +166,76 @@ bool BSPNode::foundTriangle(
 		);
 	}
 	triStartIndex = tempIndex;
-
+	
 	return true;
+
+#else
+
+	// Try to find an optimal triangle
+	triStartIndex = 0;
+	uint32_t lowestDifference = ~0u;
+	bool foundTriangle = false;
+	for (uint32_t i = 0; i < indices.size(); i += 3)
+	{
+		uint32_t triIndices[3] =
+		{
+			indices[i + 0],
+			indices[i + 1],
+			indices[i + 2]
+		};
+
+		glm::vec3 planeNormal;
+		if (!this->isTriangleDegenerate(
+			vertices,
+			triIndices[0],
+			triIndices[1],
+			triIndices[2],
+			planeNormal))
+		{
+			foundTriangle = true;
+
+			planeNormal = glm::normalize(planeNormal);
+
+			Plane tempPlane(vertices[triIndices[0]].pos, planeNormal);
+			int32_t difference = 0;
+			for (uint32_t j = 0; j < indices.size(); j += 3)
+			{
+				if (i == j)
+					continue;
+
+				float projT[3] =
+				{
+					this->projectPointOnNormal(vertices[triIndices[0]], tempPlane),
+					this->projectPointOnNormal(vertices[triIndices[1]], tempPlane),
+					this->projectPointOnNormal(vertices[triIndices[2]], tempPlane),
+				};
+
+				if (!(projT[0] == 0.0f && projT[1] == 0.0f && projT[2] == 0.0f))
+				{
+					if (projT[0] >= 0.0f && projT[1] >= 0.0f && projT[2] >= 0.0f)
+						difference++;
+					else if (projT[0] <= 0.0f && projT[1] <= 0.0f && projT[2] <= 0.0f)
+						difference--;
+				}
+			}
+
+			if (uint32_t(std::abs(difference)) < lowestDifference)
+			{
+				lowestDifference = uint32_t(std::abs(difference));
+				triStartIndex = i;
+				outputUnnormalizedNormal = planeNormal;
+			}
+		}
+	}
+
+	if (!foundTriangle)
+	{
+		Log::warning("BSP leaf is empty because of degenerate triangles");
+		// this->nodeIndices.assign(indices.begin(), indices.end());
+	}
+
+	return foundTriangle;
+#endif
 }
 
 BSPNode::BSPNode(const uint32_t& depthLevel)
@@ -260,8 +354,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 #endif
 
 		// All points lie on the plane
-		if (projT[0] >= -COMPARE_SIDE_EPSILON && projT[1] >= -COMPARE_SIDE_EPSILON && projT[2] >= -COMPARE_SIDE_EPSILON &&
-			projT[0] <= COMPARE_SIDE_EPSILON && projT[1] <= COMPARE_SIDE_EPSILON && projT[2] <= COMPARE_SIDE_EPSILON)
+		if (this->isZero(projT[0]) && this->isZero(projT[1]) && this->isZero(projT[2]))
 		{
 			this->nodeIndices.push_back(triIndices[0]);
 			this->nodeIndices.push_back(triIndices[1]);
@@ -287,7 +380,9 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			continue;
 		}
 		// All points are in the same half-space
-		else if (projT[0] >= -COMPARE_SIDE_EPSILON && projT[1] >= -COMPARE_SIDE_EPSILON && projT[2] >= -COMPARE_SIDE_EPSILON)
+		else if (this->isLargerThanZero(projT[0]) && 
+			this->isLargerThanZero(projT[1]) && 
+			this->isLargerThanZero(projT[2]))
 		{
 			positiveSpaceIndices.push_back(triIndices[0]);
 			positiveSpaceIndices.push_back(triIndices[1]);
@@ -295,7 +390,9 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 
 			continue;
 		}
-		else if (projT[0] <= COMPARE_SIDE_EPSILON && projT[1] <= COMPARE_SIDE_EPSILON && projT[2] <= COMPARE_SIDE_EPSILON)
+		else if (this->isLessThanZero(projT[0]) && 
+			this->isLessThanZero(projT[1]) && 
+			this->isLessThanZero(projT[2]))
 		{
 			negativeSpaceIndices.push_back(triIndices[0]);
 			negativeSpaceIndices.push_back(triIndices[1]);
@@ -336,6 +433,14 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 						v1,
 						t
 					);
+
+					t = max(0.001f, t);
+					t = min(0.999f, t);
+
+					/*if (t <= 0.0001f || t >= 0.9999f)
+					{
+						Log::error("t");
+					}*/
 
 #ifdef RENDER_SEPARATE_NODE_COLORS
 					newVert.color = debugColor;
@@ -476,12 +581,28 @@ void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const gl
 
 	BSPNode* firstNode = this->positiveChild;
 	BSPNode* secondNode = this->negativeChild;
+	//if (this->isLargerThanZero(this->projectPointOnNormal(camPos, this->nodePlane)))
 	if (this->projectPointOnNormal(camPos, this->nodePlane) > 0.0f)
 	{
 		firstNode = this->negativeChild;
 		secondNode = this->positiveChild;
 	}
 
+	/*if (this->isZero(this->projectPointOnNormal(camPos, this->nodePlane)))
+	{
+		Log::write("CAM IN PLANE!!!!");
+		firstNode->traverseBackToFront(outputIndices, camPos);
+		for (size_t i = 0; i < this->nodeIndices.size(); ++i)
+			outputIndices.push_back(0);
+		secondNode->traverseBackToFront(outputIndices, camPos);
+	}
+	else
+	{
+		firstNode->traverseBackToFront(outputIndices, camPos);
+		for (size_t i = 0; i < this->nodeIndices.size(); ++i)
+			outputIndices.push_back(this->nodeIndices[i]);
+		secondNode->traverseBackToFront(outputIndices, camPos);
+	}*/
 
 	firstNode->traverseBackToFront(outputIndices, camPos);
 	for (size_t i = 0; i < this->nodeIndices.size(); ++i)

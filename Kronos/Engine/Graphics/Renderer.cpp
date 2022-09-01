@@ -13,7 +13,9 @@ const std::vector<const char*> validationLayers =
 
 const std::vector<const char*> instanceExtensions =
 {
+#ifdef _DEBUG
 	"VK_EXT_validation_features"
+#endif
 };
 
 const std::vector<const char*> deviceExtensions =

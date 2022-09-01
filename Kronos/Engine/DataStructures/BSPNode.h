@@ -30,6 +30,10 @@ private:
 	float projectPointOnNormal(const Vertex& v, const Plane& plane);
 	float projectPointOnNormal(const glm::vec3& p, const Plane& plane);
 	
+	bool isZero(const float& x);
+	bool isLargerThanZero(const float& x);
+	bool isLessThanZero(const float& x);
+
 	bool inSameHalfSpace(const float& t0, const float& t1);
 	bool isTriangleDegenerate(
 		std::vector<Vertex>& vertices,
