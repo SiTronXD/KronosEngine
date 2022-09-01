@@ -4,6 +4,7 @@
 
 //#define RENDER_SEPARATE_NODE_COLORS
 #define MESH_CONVEX_EPSILON 0.1f
+#define COMPARE_SIDE_EPSILON 0.0f
 
 #define LOOP_IND(index) ((index) % 3)
 
@@ -26,10 +27,10 @@ bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
 }
 
 bool BSPNode::isTriangleDegenerate(
-	std::vector<Vertex>& vertices, 
-	const uint32_t& index0, 
-	const uint32_t& index1, 
-	const uint32_t& index2, 
+	std::vector<Vertex>& vertices,
+	const uint32_t& index0,
+	const uint32_t& index1,
+	const uint32_t& index2,
 	glm::vec3& outputUnnormalizedNormal)
 {
 	const Vertex& v0 = vertices[index0];
@@ -43,9 +44,9 @@ bool BSPNode::isTriangleDegenerate(
 	/*if (l <= 0.0f)
 	{
 		Log::write(
-			"normal: " + 
-			std::to_string(outputUnnormalizedNormal.x) + ", " + 
-			std::to_string(outputUnnormalizedNormal.y) + ", " + 
+			"normal: " +
+			std::to_string(outputUnnormalizedNormal.x) + ", " +
+			std::to_string(outputUnnormalizedNormal.y) + ", " +
 			std::to_string(outputUnnormalizedNormal.z));
 	}*/
 
@@ -149,7 +150,7 @@ BSPNode::BSPNode(const uint32_t& depthLevel)
 	positiveChild(nullptr),
 	depthLevel(depthLevel)
 {
-	
+
 }
 
 BSPNode::~BSPNode()
@@ -207,13 +208,13 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		return;
 
 	// Split into children if needed
-	if(!this->isMeshConvex(vertices, indices))//if (this->depthLevel < 10)
+	if (!this->isMeshConvex(vertices, indices))//if (this->depthLevel < 10)
 	{
 		this->negativeChild = new BSPNode(this->depthLevel + 1);
 		this->positiveChild = new BSPNode(this->depthLevel + 1);
 	}
 	// This node is a leaf
-	else 
+	else
 	{
 		// Add all triangles to this node and exit
 		for (size_t i = 0; i < indices.size(); ++i)
@@ -222,7 +223,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		return;
 	}
 
-	std::map<uint64_t, Vertex> createdVertices;
+	std::map<uint64_t, uint32_t> createdVertIndex;
 
 	const glm::vec3 debugColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
@@ -249,17 +250,18 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			this->projectPointOnNormal(vertices[triIndices[2]], this->nodePlane),
 		};
 
-		#ifdef RENDER_SEPARATE_NODE_COLORS
-			if (projT[0] == 0.0f)
-				vertices[triIndices[0]].color = debugColor;
-			if (projT[1] == 0.0f)
-				vertices[triIndices[1]].color = debugColor;
-			if (projT[2] == 0.0f)
-				vertices[triIndices[2]].color = debugColor;
-		#endif
+#ifdef RENDER_SEPARATE_NODE_COLORS
+		if (projT[0] == 0.0f)
+			vertices[triIndices[0]].color = debugColor;
+		if (projT[1] == 0.0f)
+			vertices[triIndices[1]].color = debugColor;
+		if (projT[2] == 0.0f)
+			vertices[triIndices[2]].color = debugColor;
+#endif
 
 		// All points lie on the plane
-		if (projT[0] == 0.0f && projT[1] == 0.0f && projT[2] == 0.0f)
+		if (projT[0] >= -COMPARE_SIDE_EPSILON && projT[1] >= -COMPARE_SIDE_EPSILON && projT[2] >= -COMPARE_SIDE_EPSILON &&
+			projT[0] <= COMPARE_SIDE_EPSILON && projT[1] <= COMPARE_SIDE_EPSILON && projT[2] <= COMPARE_SIDE_EPSILON)
 		{
 			this->nodeIndices.push_back(triIndices[0]);
 			this->nodeIndices.push_back(triIndices[1]);
@@ -268,7 +270,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			continue;
 		}
 		// All points are in the same half-space
-		else if (projT[0] >= 0 && projT[1] >= 0 && projT[2] >= 0)
+		else if (projT[0] >= 0.0f && projT[1] >= 0.0f && projT[2] >= 0.0f)
 		{
 			positiveSpaceIndices.push_back(triIndices[0]);
 			positiveSpaceIndices.push_back(triIndices[1]);
@@ -276,7 +278,24 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 
 			continue;
 		}
-		else if (projT[0] <= 0 && projT[1] <= 0 && projT[2] <= 0)
+		else if (projT[0] <= 0.0f && projT[1] <= 0.0f && projT[2] <= 0.0f)
+		{
+			negativeSpaceIndices.push_back(triIndices[0]);
+			negativeSpaceIndices.push_back(triIndices[1]);
+			negativeSpaceIndices.push_back(triIndices[2]);
+
+			continue;
+		}
+		// All points are in the same half-space
+		else if (projT[0] >= -COMPARE_SIDE_EPSILON && projT[1] >= -COMPARE_SIDE_EPSILON && projT[2] >= -COMPARE_SIDE_EPSILON)
+		{
+			positiveSpaceIndices.push_back(triIndices[0]);
+			positiveSpaceIndices.push_back(triIndices[1]);
+			positiveSpaceIndices.push_back(triIndices[2]);
+
+			continue;
+		}
+		else if (projT[0] <= COMPARE_SIDE_EPSILON && projT[1] <= COMPARE_SIDE_EPSILON && projT[2] <= COMPARE_SIDE_EPSILON)
 		{
 			negativeSpaceIndices.push_back(triIndices[0]);
 			negativeSpaceIndices.push_back(triIndices[1]);
@@ -287,11 +306,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 
 		// Create max 2 new vertices
 		uint32_t numNewVerts = 0;
-		uint32_t newTriIndices[2] =
-		{
-			vertices.size(),
-			vertices.size() + 1,
-		};
+		uint32_t newTriIndices[2] = { ~0u, ~0u };
 
 		float lastResult = projT[2];
 		for (uint32_t i = 0; i < 3; ++i)
@@ -304,33 +319,37 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 				// Point indices
 				uint32_t index0 = triIndices[i];
 				uint32_t index1 = triIndices[LOOP_IND(i + 2)];
-				if (index0 > index1)
+
+				assert(index0 != index1);
+
+				uint64_t edgeIndex = (uint64_t(min(index0, index1)) << 32) | uint64_t(max(index0, index1));
+				if (!createdVertIndex.count(edgeIndex))
 				{
-					const uint32_t tempIndex = index0;
-					index0 = index1;
-					index1 = tempIndex;
-				}
+					// Points
+					Vertex& v0 = vertices[index0];
+					Vertex& v1 = vertices[index1];
 
-				// Points
-				Vertex& v0 = vertices[index0];
-				Vertex& v1 = vertices[index1];
+					// Interpolate new vertex
+					float t = currentResult / (currentResult - lastResult);
+					Vertex newVert = Vertex::interpolateVertex(
+						v0,
+						v1,
+						t
+					);
 
-				// Interpolate new vertex
-				float t = currentResult / (currentResult - lastResult);
-				Vertex newVert = Vertex::interpolateVertex(
-					v0,
-					v1,
-					t
-				);
-
-				#ifdef RENDER_SEPARATE_NODE_COLORS
+#ifdef RENDER_SEPARATE_NODE_COLORS
 					newVert.color = debugColor;
-				#endif
+#endif
 
-				// Add new vertex
-				uint64_t edgeIndex = (uint64_t(index0) << 32) | uint64_t(index1);
-				createdVertices.insert(std::pair<uint64_t, Vertex>(edgeIndex, newVert));
-				vertices.push_back(newVert);
+					// Add new vertex
+					newTriIndices[numNewVerts] = vertices.size();
+					createdVertIndex.insert(std::pair<uint64_t, uint32_t>(edgeIndex, newTriIndices[numNewVerts]));
+					vertices.push_back(newVert);
+				}
+				else
+				{
+					newTriIndices[numNewVerts] = createdVertIndex[edgeIndex];
+				}
 				numNewVerts++;
 			}
 
@@ -382,6 +401,8 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 				(projT[1] == 0.0f) * 1 +
 				(projT[2] == 0.0f) * 2;
 
+			assert(baseIndex >= 0 && baseIndex <= 2);
+
 			std::vector<uint32_t>* firstSideIndices = &positiveSpaceIndices;
 			std::vector<uint32_t>* secondSideIndices = &negativeSpaceIndices;
 			if (projT[LOOP_IND(baseIndex + 2)] < 0.0f)
@@ -402,28 +423,28 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	}
 
 
-	#ifdef RENDER_SEPARATE_NODE_COLORS
-		glm::vec3 randCol0 = glm::vec3(
-			(float) rand() / RAND_MAX,
-			(float) rand() / RAND_MAX,
-			(float) rand() / RAND_MAX
-		);
-		glm::vec3 randCol1 = glm::vec3(
-			(float)rand() / RAND_MAX,
-			(float)rand() / RAND_MAX,
-			(float)rand() / RAND_MAX
-		);
-		for (size_t i = 0; i < negativeSpaceIndices.size(); ++i)
-		{
-			Vertex& v = vertices[negativeSpaceIndices[i]];
-			v.color = randCol0;
-		}
-		for (size_t i = 0; i < positiveSpaceIndices.size(); ++i)
-		{
-			Vertex& v = vertices[positiveSpaceIndices[i]];
-			v.color = randCol1;
-		}
-	#endif
+#ifdef RENDER_SEPARATE_NODE_COLORS
+	glm::vec3 randCol0 = glm::vec3(
+		(float)rand() / RAND_MAX,
+		(float)rand() / RAND_MAX,
+		(float)rand() / RAND_MAX
+	);
+	glm::vec3 randCol1 = glm::vec3(
+		(float)rand() / RAND_MAX,
+		(float)rand() / RAND_MAX,
+		(float)rand() / RAND_MAX
+	);
+	for (size_t i = 0; i < negativeSpaceIndices.size(); ++i)
+	{
+		Vertex& v = vertices[negativeSpaceIndices[i]];
+		v.color = randCol0;
+	}
+	for (size_t i = 0; i < positiveSpaceIndices.size(); ++i)
+	{
+		Vertex& v = vertices[positiveSpaceIndices[i]];
+		v.color = randCol1;
+	}
+#endif
 
 	this->negativeChild->splitMesh(vertices, negativeSpaceIndices);
 	this->positiveChild->splitMesh(vertices, positiveSpaceIndices);
@@ -468,7 +489,7 @@ void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const gl
 	secondNode->traverseBackToFront(outputIndices, camPos);
 }
 
-void BSPNode::traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos)
+/*void BSPNode::traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos)
 {
 	// Leaf node
 	if (!this->negativeChild && !this->positiveChild)
@@ -492,7 +513,7 @@ void BSPNode::traverseFrontToBack(std::vector<uint32_t>& outputIndices, const gl
 	for (size_t i = 0; i < this->nodeIndices.size(); ++i)
 		outputIndices.push_back(this->nodeIndices[i]);
 	secondNode->traverseFrontToBack(outputIndices, camPos);
-}
+}*/
 
 void BSPNode::getTreeDepth(uint32_t& value)
 {
