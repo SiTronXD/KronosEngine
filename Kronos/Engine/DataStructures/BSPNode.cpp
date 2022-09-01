@@ -1,3 +1,4 @@
+#include <map>
 #include "BSPNode.h"
 #include "../Dev/Log.h"
 
@@ -221,6 +222,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		return;
 	}
 
+	std::map<uint64_t, Vertex> createdVertices;
 
 	const glm::vec3 debugColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
@@ -299,9 +301,19 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			// Check if the points are in different half-spaces
 			if (!this->inSameHalfSpace(currentResult, lastResult))
 			{
+				// Point indices
+				uint32_t index0 = triIndices[i];
+				uint32_t index1 = triIndices[LOOP_IND(i + 2)];
+				if (index0 > index1)
+				{
+					const uint32_t tempIndex = index0;
+					index0 = index1;
+					index1 = tempIndex;
+				}
+
 				// Points
-				Vertex& v0 = vertices[triIndices[i]];
-				Vertex& v1 = vertices[triIndices[LOOP_IND(i + 2)]];
+				Vertex& v0 = vertices[index0];
+				Vertex& v1 = vertices[index1];
 
 				// Interpolate new vertex
 				float t = currentResult / (currentResult - lastResult);
@@ -316,6 +328,8 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 				#endif
 
 				// Add new vertex
+				uint64_t edgeIndex = (uint64_t(index0) << 32) | uint64_t(index1);
+				createdVertices.insert(std::pair<uint64_t, Vertex>(edgeIndex, newVert));
 				vertices.push_back(newVert);
 				numNewVerts++;
 			}
@@ -334,9 +348,9 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			// Reverse order if needed
 			if (baseIndex == 2)
 			{
-				const Vertex tempVert = vertices[vertices.size() - 2];
-				vertices[vertices.size() - 2] = vertices[vertices.size() - 1];
-				vertices[vertices.size() - 1] = tempVert;
+				const uint32_t tempIndex = newTriIndices[0];
+				newTriIndices[0] = newTriIndices[1];
+				newTriIndices[1] = tempIndex;
 			}
 
 			std::vector<uint32_t>* firstSideIndices = &positiveSpaceIndices;
