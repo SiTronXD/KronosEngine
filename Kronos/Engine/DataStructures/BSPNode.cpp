@@ -401,6 +401,17 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			continue;
 		}
 
+		glm::vec3 triNormal;
+		if (this->isTriangleDegenerate(
+			vertices,
+			triIndices[0],
+			triIndices[1],
+			triIndices[2],
+			triNormal))
+		{
+			Log::error("Tries to clip degenerate triangle");
+		}
+
 		// Create max 2 new vertices
 		uint32_t numNewVerts = 0;
 		uint32_t newTriIndices[2] = { ~0u, ~0u };
@@ -434,8 +445,8 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 						t
 					);
 
-					t = max(0.001f, t);
-					t = min(0.999f, t);
+					/*t = max(0.001f, t);
+					t = min(0.999f, t);*/
 
 					/*if (t <= 0.0001f || t >= 0.9999f)
 					{
