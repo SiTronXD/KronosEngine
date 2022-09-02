@@ -4,13 +4,13 @@
 
 #include <fstream>
 
-void Shader::readFile(const std::string& filename, std::vector<char>& output)
+void Shader::readFile(const std::string& filePath, std::vector<char>& output)
 {
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
+	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
 	// Try to open file
 	if (!file.is_open())
-		Log::error("Failed to open file.");
+		Log::error("Failed to open shader file: " + filePath);
 
 	// Allocate buffer from read position at the end of the file
 	size_t fileSize = (size_t)file.tellg();

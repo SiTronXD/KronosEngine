@@ -39,6 +39,11 @@ private:
 		std::vector<Vertex>& vertices,
 		const uint32_t& index0,
 		const uint32_t& index1,
+		const uint32_t& index2);
+	bool isTriangleDegenerate(
+		std::vector<Vertex>& vertices,
+		const uint32_t& index0,
+		const uint32_t& index1,
 		const uint32_t& index2,
 		glm::vec3& outputUnnormalizedNormal);
 	bool isMeshConvex(

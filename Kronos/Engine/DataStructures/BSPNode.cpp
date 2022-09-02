@@ -47,6 +47,28 @@ bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
 	return (t0 <= 0 && t1 <= 0) || (t0 >= 0 && t1 >= 0);
 }
 
+bool BSPNode::isTriangleDegenerate(std::vector<Vertex>& vertices, const uint32_t& index0, const uint32_t& index1, const uint32_t& index2)
+{
+	const Vertex& v0 = vertices[index0];
+	const Vertex& v1 = vertices[index1];
+	const Vertex& v2 = vertices[index2];
+	const glm::vec3 edge0 = v1.pos - v0.pos;
+	const glm::vec3 edge1 = v2.pos - v0.pos;
+	glm::vec3 normal = glm::cross(edge0, edge1);
+	float lengthSquared = glm::dot(normal, normal);
+
+	/*if (l <= 0.0f)
+	{
+		Log::write(
+			"normal: " +
+			std::to_string(outputUnnormalizedNormal.x) + ", " +
+			std::to_string(outputUnnormalizedNormal.y) + ", " +
+			std::to_string(outputUnnormalizedNormal.z));
+	}*/
+
+	return lengthSquared <= 0.0f;
+}
+
 bool BSPNode::isTriangleDegenerate(
 	std::vector<Vertex>& vertices,
 	const uint32_t& index0,
@@ -60,7 +82,7 @@ bool BSPNode::isTriangleDegenerate(
 	const glm::vec3 edge0 = v1.pos - v0.pos;
 	const glm::vec3 edge1 = v2.pos - v0.pos;
 	outputUnnormalizedNormal = glm::cross(edge0, edge1);
-	float l = glm::dot(outputUnnormalizedNormal, outputUnnormalizedNormal);
+	float lengthSquared = glm::dot(outputUnnormalizedNormal, outputUnnormalizedNormal);
 
 	/*if (l <= 0.0f)
 	{
@@ -71,7 +93,7 @@ bool BSPNode::isTriangleDegenerate(
 			std::to_string(outputUnnormalizedNormal.z));
 	}*/
 
-	return l <= 0.0f;
+	return lengthSquared <= 0.0f;
 }
 
 bool BSPNode::isMeshConvex(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
@@ -354,7 +376,12 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 #endif
 
 		// All points lie on the plane
-		if (this->isZero(projT[0]) && this->isZero(projT[1]) && this->isZero(projT[2]))
+		if (this->isTriangleDegenerate(
+			vertices,
+			triIndices[0],
+			triIndices[1],
+			triIndices[2]) || 
+			(this->isZero(projT[0]) && this->isZero(projT[1]) && this->isZero(projT[2])))
 		{
 			this->nodeIndices.push_back(triIndices[0]);
 			this->nodeIndices.push_back(triIndices[1]);
@@ -401,7 +428,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			continue;
 		}
 
-		glm::vec3 triNormal;
+		/*glm::vec3 triNormal;
 		if (this->isTriangleDegenerate(
 			vertices,
 			triIndices[0],
@@ -410,7 +437,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			triNormal))
 		{
 			Log::error("Tries to clip degenerate triangle");
-		}
+		}*/
 
 		// Create max 2 new vertices
 		uint32_t numNewVerts = 0;
@@ -456,6 +483,11 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 #ifdef RENDER_SEPARATE_NODE_COLORS
 					newVert.color = debugColor;
 #endif
+
+					if (vertices.size() == 3646)
+					{
+						Log::warning("dick");
+					}
 
 					// Add new vertex
 					newTriIndices[numNewVerts] = vertices.size();
