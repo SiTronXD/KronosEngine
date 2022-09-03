@@ -2,9 +2,8 @@
 #include "../Dev/Log.h"
 
 //#define RENDER_SEPARATE_NODE_COLORS
-#define MESH_CONVEX_EPSILON 0.001f
-#define COMPARE_SIDE_EPSILON 0.001f
-#define PICK_GOOD_TRIANGLE
+#define EPSILON 0.0001f
+#define LOWER_TREE_DEPTH
 
 #define LOOP_IND(index) ((index) % 3)
 
@@ -81,21 +80,21 @@ float BSPNode::projectPointOnNormal(const glm::vec3& p, const Plane& plane)
 bool BSPNode::isZero(const float& x)
 {
 	// if(abs(x - y) <= epsilon * max(abs(x), abs(y), 1.0f))
-	return std::abs(x) <= COMPARE_SIDE_EPSILON * std::max(std::abs(x), 1.0f);
+	return std::abs(x) <= EPSILON * std::max(std::abs(x), 1.0f);
 }
 
 bool BSPNode::isLargerThanZero(const float& x)
 {
-	//return x >= -COMPARE_SIDE_EPSILON;
+	//return x >= -EPSILON;
 	
-	return x >= -COMPARE_SIDE_EPSILON * std::max(abs(x), 1.0f);
+	return x >= -EPSILON * std::max(abs(x), 1.0f);
 }
 
 bool BSPNode::isLessThanZero(const float& x)
 {
-	//return x <= COMPARE_SIDE_EPSILON;
+	//return x <= EPSILON;
 
-	return x <= COMPARE_SIDE_EPSILON * std::max(abs(x), 1.0f);
+	return x <= EPSILON * std::max(abs(x), 1.0f);
 }
 
 bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
@@ -191,10 +190,10 @@ bool BSPNode::isMeshConvex(std::vector<Vertex>& vertices, std::vector<uint32_t>&
 			};
 
 			// One triangle is in front of plane, this mesh is not convex
-			if (projT[0] > MESH_CONVEX_EPSILON || projT[1] > MESH_CONVEX_EPSILON || projT[2] > MESH_CONVEX_EPSILON)
-				return false;
-			/*if (this->isLargerThanZero(projT[0]) || this->isLargerThanZero(projT[1]) || this->isLargerThanZero(projT[2]))
+			/*if (projT[0] > MESH_CONVEX_EPSILON || projT[1] > MESH_CONVEX_EPSILON || projT[2] > MESH_CONVEX_EPSILON)
 				return false;*/
+			if (this->isLargerThanZero(projT[0]) || this->isLargerThanZero(projT[1]) || this->isLargerThanZero(projT[2]))
+				return false;
 		}
 	}
 
@@ -207,7 +206,7 @@ bool BSPNode::foundTriangle(
 	uint32_t& triStartIndex,
 	glm::vec3& outputUnnormalizedNormal)
 {
-#ifndef PICK_GOOD_TRIANGLE
+#ifndef LOWER_TREE_DEPTH
 
 	// Try a random triangle
 	float randomT = (float)rand() / RAND_MAX;
@@ -257,26 +256,19 @@ bool BSPNode::foundTriangle(
 	bool foundTriangle = false;
 	for (uint32_t i = 0; i < indices.size(); i += 3)
 	{
-		uint32_t triIndices[3] =
-		{
-			indices[i + 0],
-			indices[i + 1],
-			indices[i + 2]
-		};
-
 		glm::vec3 planeNormal;
 		if (!this->isTriangleDegenerate(
 			vertices,
-			triIndices[0],
-			triIndices[1],
-			triIndices[2],
+			indices[i + 0],
+			indices[i + 1],
+			indices[i + 2],
 			planeNormal))
 		{
 			foundTriangle = true;
 
 			planeNormal = glm::normalize(planeNormal);
 
-			Plane tempPlane(vertices[triIndices[0]].pos, planeNormal);
+			Plane tempPlane(vertices[indices[i + 0]].pos, planeNormal);
 			int32_t difference = 0;
 			for (uint32_t j = 0; j < indices.size(); j += 3)
 			{
@@ -285,16 +277,16 @@ bool BSPNode::foundTriangle(
 
 				float projT[3] =
 				{
-					this->projectPointOnNormal(vertices[triIndices[0]], tempPlane),
-					this->projectPointOnNormal(vertices[triIndices[1]], tempPlane),
-					this->projectPointOnNormal(vertices[triIndices[2]], tempPlane),
+					this->projectPointOnNormal(vertices[indices[j + 0]], tempPlane),
+					this->projectPointOnNormal(vertices[indices[j + 1]], tempPlane),
+					this->projectPointOnNormal(vertices[indices[j + 2]], tempPlane),
 				};
 
-				if (!(projT[0] == 0.0f && projT[1] == 0.0f && projT[2] == 0.0f))
+				if (!(this->isZero(projT[0]) && this->isZero(projT[1]) && this->isZero(projT[2])))
 				{
-					if (projT[0] >= 0.0f && projT[1] >= 0.0f && projT[2] >= 0.0f)
+					if (this->isLargerThanZero(projT[0]) && this->isLargerThanZero(projT[1]) && this->isLargerThanZero(projT[2]))
 						difference++;
-					else if (projT[0] <= 0.0f && projT[1] <= 0.0f && projT[2] <= 0.0f)
+					else if (this->isLessThanZero(projT[0]) && this->isLessThanZero(projT[1]) && this->isLessThanZero(projT[2]))
 						difference--;
 				}
 			}
