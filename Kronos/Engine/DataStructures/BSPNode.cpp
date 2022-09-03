@@ -97,6 +97,11 @@ bool BSPNode::isLessThanZero(const float& x)
 	return x <= EPSILON * std::max(abs(x), 1.0f);
 }
 
+bool BSPNode::isLargerThanUpperZero(const float& x)
+{
+	return x > EPSILON * std::max(abs(x), 1.0f);
+}
+
 bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
 {
 	return (this->isLessThanZero(t0) && this->isLessThanZero(t1)) ||
@@ -192,7 +197,9 @@ bool BSPNode::isMeshConvex(std::vector<Vertex>& vertices, std::vector<uint32_t>&
 			// One triangle is in front of plane, this mesh is not convex
 			/*if (projT[0] > MESH_CONVEX_EPSILON || projT[1] > MESH_CONVEX_EPSILON || projT[2] > MESH_CONVEX_EPSILON)
 				return false;*/
-			if (this->isLargerThanZero(projT[0]) || this->isLargerThanZero(projT[1]) || this->isLargerThanZero(projT[2]))
+			if (this->isLargerThanUpperZero(projT[0]) || 
+				this->isLargerThanUpperZero(projT[1]) || 
+				this->isLargerThanUpperZero(projT[2]))
 				return false;
 		}
 	}

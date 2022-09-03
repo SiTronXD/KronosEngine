@@ -42,6 +42,8 @@ private:
 	bool isLargerThanZero(const float& x);
 	bool isLessThanZero(const float& x);
 
+	bool isLargerThanUpperZero(const float& x);
+
 	bool inSameHalfSpace(const float& t0, const float& t1);
 	bool isTriangleDegenerate(
 		std::vector<Vertex>& vertices,

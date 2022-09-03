@@ -293,7 +293,6 @@ void Renderer::setToWireframe(bool wireframe)
 		this->renderPass,
 		wireframe
 	);
-	Log::write("WIREFRAME!!!!");
 }
 
 void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)

@@ -8,42 +8,6 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_vulkan.h>*/
 
-/*
-std::vector<Vertex> quadsVertices =
-{
-	{{  0.5f,  0.0f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
-	{{ -0.5f,  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-	{{ -0.5f,  0.0f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
-	{{  0.5f,  0.0f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
-
-	{{  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f }},
-	{{ -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-	{{ -0.5f, -0.5f,  0.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f }},
-	{{  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }},
-};
-*/
-
-std::vector<Vertex> quadsVertices =
-{
-	{{  0.5f,  0.0f, -0.5f }, { 0.5f, 0.0f, 0.0f }, { 1.0f, 0.0f }},
-	{{ -0.5f,  0.0f, -0.5f }, { 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-	{{ -0.5f,  0.0f,  0.5f }, { 0.5f, 0.0f, 0.0f }, { 0.0f, 1.0f }},
-	{{  0.5f,  0.0f,  0.5f }, { 0.5f, 0.0f, 0.0f }, { 1.0f, 1.0f }},
-
-	{{  0.5f, -0.5f, -0.5f }, { 0.5f, 0.0f, 0.0f }, { 1.0f, 0.0f }},
-	{{ -0.5f, -0.5f, -0.5f }, { 0.5f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
-	{{ -0.5f, -0.5f,  0.5f }, { 0.5f, 0.0f, 0.0f }, { 0.0f, 1.0f }},
-	{{  0.5f, -0.5f,  0.5f }, { 0.5f, 0.0f, 0.0f }, { 1.0f, 1.0f }},
-};
-std::vector<uint32_t> quadsIndices =
-{
-	4, 5, 6,
-	6, 7, 4,
-
-	0, 1, 2,
-	2, 3, 0
-};
-
 Engine::Engine()
 {
 }
@@ -68,7 +32,6 @@ void Engine::init()
 	//meshData.loadOBJ("Resources/Models/lowResSphere.obj");
 	//meshData.loadOBJ("Resources/Models/lowResThreeSpheres.obj");
 	//meshData.loadOBJ("Resources/Models/torus.obj");
-	//meshData.create(quadsVertices, quadsIndices);
 
 	// BSP to render mesh with
 	BSP bsp;
