@@ -63,8 +63,8 @@ void Engine::init()
 	MeshData meshData;
 	//meshData.loadOBJ("Resources/Models/dragon_vrip_res1.obj");
 	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
-	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
-	meshData.loadOBJ("Resources/Models/suzanne.obj");
+	meshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
+	//meshData.loadOBJ("Resources/Models/suzanne.obj");
 	//meshData.loadOBJ("Resources/Models/sphereTest.obj");
 	//meshData.loadOBJ("Resources/Models/lowResSphere.obj");
 	//meshData.loadOBJ("Resources/Models/lowResThreeSpheres.obj");

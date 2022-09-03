@@ -1,4 +1,3 @@
-#include <map>
 #include "BSPNode.h"
 #include "../Dev/Log.h"
 
@@ -8,6 +7,63 @@
 #define PICK_GOOD_TRIANGLE
 
 #define LOOP_IND(index) ((index) % 3)
+
+void BSPNode::replaceEdgeForIndices(
+	std::map<uint64_t, uint32_t>& createdVertIndex, 
+	std::vector<uint32_t>& indicesOutput)
+{
+	std::vector<uint32_t> newIndices;
+	newIndices.reserve(indicesOutput.size());
+	for (size_t i = 0; i < indicesOutput.size(); i += 3)
+	{
+		uint32_t triIndices[3] =
+		{
+			indicesOutput[i + 0],
+			indicesOutput[i + 1],
+			indicesOutput[i + 2]
+		};
+
+		bool shouldReplaceEdge = false;
+
+		// Go through each edge
+		for (size_t j = 0; j < 3; ++j)
+		{
+			uint64_t edgeIndex = this->getEdgeIndex(
+				triIndices[j],
+				triIndices[LOOP_IND(j + 1)]
+			);
+
+			// Check if edge should be replaced
+			if (createdVertIndex.count(edgeIndex))
+			{
+				shouldReplaceEdge = true;
+
+				uint32_t newVertIndex = createdVertIndex[edgeIndex];
+
+				newIndices.push_back(newVertIndex);
+				newIndices.push_back(triIndices[LOOP_IND(j + 2)]);
+				newIndices.push_back(triIndices[LOOP_IND(j + 0)]);
+
+				newIndices.push_back(newVertIndex);
+				newIndices.push_back(triIndices[LOOP_IND(j + 1)]);
+				newIndices.push_back(triIndices[LOOP_IND(j + 2)]);
+			}
+		}
+
+		if (!shouldReplaceEdge)
+		{
+			newIndices.push_back(triIndices[0]);
+			newIndices.push_back(triIndices[1]);
+			newIndices.push_back(triIndices[2]);
+		}
+	}
+	indicesOutput.assign(newIndices.begin(), newIndices.end());
+}
+
+uint64_t BSPNode::getEdgeIndex(const uint32_t& index0, const uint32_t& index1)
+{
+	return (uint64_t(std::min(index0, index1)) << 32) | uint64_t(std::max(index0, index1));
+}
 
 float BSPNode::projectPointOnNormal(const Vertex& v, const Plane& plane)
 {
@@ -25,21 +81,21 @@ float BSPNode::projectPointOnNormal(const glm::vec3& p, const Plane& plane)
 bool BSPNode::isZero(const float& x)
 {
 	// if(abs(x - y) <= epsilon * max(abs(x), abs(y), 1.0f))
-	return std::abs(x) <= COMPARE_SIDE_EPSILON * max(std::abs(x), 1.0f);
+	return std::abs(x) <= COMPARE_SIDE_EPSILON * std::max(std::abs(x), 1.0f);
 }
 
 bool BSPNode::isLargerThanZero(const float& x)
 {
 	//return x >= -COMPARE_SIDE_EPSILON;
 	
-	return x >= -COMPARE_SIDE_EPSILON * max(abs(x), 1.0f);
+	return x >= -COMPARE_SIDE_EPSILON * std::max(abs(x), 1.0f);
 }
 
 bool BSPNode::isLessThanZero(const float& x)
 {
 	//return x <= COMPARE_SIDE_EPSILON;
 
-	return x <= COMPARE_SIDE_EPSILON * max(abs(x), 1.0f);
+	return x <= COMPARE_SIDE_EPSILON * std::max(abs(x), 1.0f);
 }
 
 bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
@@ -279,20 +335,22 @@ BSPNode::~BSPNode()
 	this->positiveChild = nullptr;
 }
 
-void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+void BSPNode::splitMesh(
+	std::vector<Vertex>& vertices, 
+	BSPNode* rootNode)
 {
 	// No triangles in this node
-	if (indices.size() <= 0)
+	if (this->tempNodeIndices.size() <= 0)
 		return;
 
 	// Pick an appropriate triangle if possible
 	uint32_t triStartIndex = 0;
 	glm::vec3 normal = glm::vec3(0.0f);
-	if (!this->foundTriangle(vertices, indices, triStartIndex, normal))
+	if (!this->foundTriangle(vertices, this->tempNodeIndices, triStartIndex, normal))
 		return;
 
 	// Plane position
-	this->nodePlane.pos = vertices[indices[triStartIndex]].pos;
+	this->nodePlane.pos = vertices[this->tempNodeIndices[triStartIndex]].pos;
 
 	// Plane normal
 	normal = glm::normalize(normal);
@@ -315,18 +373,18 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	// Add the chosen triangle to this node, 
 	// and remove it from evaluation
 	for (uint32_t i = 0; i < 3; ++i)
-		this->nodeIndices.push_back(indices[triStartIndex + i]);
-	indices.erase(
-		indices.begin() + triStartIndex,
-		indices.begin() + triStartIndex + 3
+		this->nodeIndices.push_back(this->tempNodeIndices[triStartIndex + i]);
+	this->tempNodeIndices.erase(
+		this->tempNodeIndices.begin() + triStartIndex,
+		this->tempNodeIndices.begin() + triStartIndex + 3
 	);
 
 	// No more triangles in this node
-	if (indices.size() <= 0)
+	if (this->tempNodeIndices.size() <= 0)
 		return;
 
 	// Split into children if needed
-	if (!this->isMeshConvex(vertices, indices))//if (this->depthLevel < 10)
+	if (!this->isMeshConvex(vertices, this->tempNodeIndices))
 	{
 		this->negativeChild = new BSPNode(this->depthLevel + 1);
 		this->positiveChild = new BSPNode(this->depthLevel + 1);
@@ -335,8 +393,8 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	else
 	{
 		// Add all triangles to this node and exit
-		for (size_t i = 0; i < indices.size(); ++i)
-			this->nodeIndices.push_back(indices[i]);
+		for (size_t i = 0; i < this->tempNodeIndices.size(); ++i)
+			this->nodeIndices.push_back(this->tempNodeIndices[i]);
 
 		return;
 	}
@@ -345,21 +403,21 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 
 	const glm::vec3 debugColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
-	this->nodeIndices.reserve(indices.size());
+	this->nodeIndices.reserve(this->tempNodeIndices.size());
 
 	std::vector<uint32_t> positiveSpaceIndices;
 	std::vector<uint32_t> negativeSpaceIndices;
-	positiveSpaceIndices.reserve(indices.size());
-	negativeSpaceIndices.reserve(indices.size());
+	positiveSpaceIndices.reserve(this->tempNodeIndices.size());
+	negativeSpaceIndices.reserve(this->tempNodeIndices.size());
 
 	// Loop through each triangle
-	for (size_t i = 0; i < indices.size(); i += 3)
+	for (size_t i = 0; i < this->tempNodeIndices.size(); i += 3)
 	{
 		uint32_t triIndices[3] =
 		{
-			indices[i + 0],
-			indices[i + 1],
-			indices[i + 2]
+			this->tempNodeIndices[i + 0],
+			this->tempNodeIndices[i + 1],
+			this->tempNodeIndices[i + 2]
 		};
 		float projT[3] =
 		{
@@ -459,7 +517,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 
 				assert(index0 != index1);
 
-				uint64_t edgeIndex = (uint64_t(min(index0, index1)) << 32) | uint64_t(max(index0, index1));
+				uint64_t edgeIndex = this->getEdgeIndex(index0, index1);
 				if (!createdVertIndex.count(edgeIndex))
 				{
 					// Points
@@ -572,7 +630,7 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		}
 		else if (numNewVerts == 0)
 		{
-			Log::error("No new verts...");
+			Log::error("No new vertices, despite expecting new ones.");
 		}
 	}
 
@@ -600,8 +658,30 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 	}
 #endif
 
-	this->negativeChild->splitMesh(vertices, negativeSpaceIndices);
-	this->positiveChild->splitMesh(vertices, positiveSpaceIndices);
+	this->negativeChild->assignSpaceIndices(negativeSpaceIndices);
+	this->positiveChild->assignSpaceIndices(positiveSpaceIndices);
+
+	// Traverse from root and replace shared edges
+	rootNode->replaceEdges(createdVertIndex);
+
+	this->negativeChild->splitMesh(vertices, rootNode);
+	this->positiveChild->splitMesh(vertices, rootNode);
+
+
+	this->tempNodeIndices.clear();
+}
+
+void BSPNode::replaceEdges(std::map<uint64_t, uint32_t>& createdVertIndex)
+{
+	this->replaceEdgeForIndices(createdVertIndex, this->nodeIndices);
+	this->replaceEdgeForIndices(createdVertIndex, this->tempNodeIndices);
+
+	// Continue traversal
+	if (this->negativeChild && this->positiveChild)
+	{
+		this->negativeChild->replaceEdges(createdVertIndex);
+		this->positiveChild->replaceEdges(createdVertIndex);
+	}
 }
 
 void BSPNode::getMergedIndices(std::vector<uint32_t>& outputIndices)
@@ -685,11 +765,16 @@ void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const gl
 	secondNode->traverseFrontToBack(outputIndices, camPos);
 }*/
 
+void BSPNode::assignSpaceIndices(std::vector<uint32_t>& indices)
+{
+	this->tempNodeIndices.assign(indices.begin(), indices.end());
+}
+
 void BSPNode::getTreeDepth(uint32_t& value)
 {
 	if (!this->negativeChild && !this->positiveChild)
 	{
-		value = max(value, this->depthLevel);
+		value = std::max(value, this->depthLevel);
 		return;
 	}
 

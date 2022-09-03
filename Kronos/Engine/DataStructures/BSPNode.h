@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <map>
 #include "../Graphics/MeshData.h"
 
 struct Plane
@@ -18,6 +19,7 @@ struct Plane
 class BSPNode
 {
 private:
+	std::vector<uint32_t> tempNodeIndices;
 	std::vector<uint32_t> nodeIndices;
 
 	Plane nodePlane;
@@ -26,6 +28,12 @@ private:
 	BSPNode* positiveChild;
 
 	uint32_t depthLevel;
+
+	void replaceEdgeForIndices(
+		std::map<uint64_t, uint32_t>& createdVertIndex, 
+		std::vector<uint32_t>& indicesOutput);
+
+	uint64_t getEdgeIndex(const uint32_t& index0, const uint32_t& index1);
 
 	float projectPointOnNormal(const Vertex& v, const Plane& plane);
 	float projectPointOnNormal(const glm::vec3& p, const Plane& plane);
@@ -60,10 +68,12 @@ public:
 	BSPNode(const uint32_t& depthLevel);
 	~BSPNode();
 
-	void splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+	void splitMesh(std::vector<Vertex>& vertices, BSPNode* rootNode);
+	void replaceEdges(std::map<uint64_t, uint32_t>& createdVertIndex);
 	void getMergedIndices(std::vector<uint32_t>& outputIndices);
 	void traverseBackToFront(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos);
 	//void traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos);
 
+	void assignSpaceIndices(std::vector<uint32_t>& indices);
 	void getTreeDepth(uint32_t& value);
 };

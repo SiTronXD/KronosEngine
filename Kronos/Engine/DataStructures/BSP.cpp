@@ -1,3 +1,4 @@
+#include <chrono>
 #include "BSP.h"
 #include "../Dev/Log.h"
 
@@ -19,6 +20,10 @@ BSP::~BSP()
 
 void BSP::createFromMeshData(MeshData& meshData)
 {
+	// Record start time
+	std::chrono::system_clock::time_point startTime = 
+		std::chrono::system_clock::now();
+
 	uint32_t numOriginalVerts = meshData.getVertices().size();
 	uint32_t numOriginalInd = meshData.getIndices().size();
 
@@ -31,12 +36,18 @@ void BSP::createFromMeshData(MeshData& meshData)
 	std::vector<uint32_t> indices = meshData.getIndices();
 
 	// Split recursively
-	this->rootNode->splitMesh(vertices, indices);
+	this->rootNode->assignSpaceIndices(indices);
+	this->rootNode->splitMesh(vertices, this->rootNode);
 
 	// Get new indices
 	std::vector<uint32_t> newIndices;
 	newIndices.reserve(indices.size());
 	this->rootNode->getMergedIndices(newIndices);
+
+	// Record end time
+	std::chrono::system_clock::time_point endTime = 
+		std::chrono::system_clock::now();
+	std::chrono::duration<float> elapsedSeconds = endTime - startTime;
 
 	// Write
 	Log::write("");
@@ -49,6 +60,7 @@ void BSP::createFromMeshData(MeshData& meshData)
 	Log::write("Num indices: " + std::to_string(newIndices.size()));
 	Log::write("Num triangles: " + std::to_string(newIndices.size() / 3) + "\n");
 	Log::write("BSP tree depth: " + std::to_string(this->getTreeDepth()));
+	Log::write("BPS creation time: " + std::to_string(elapsedSeconds.count()) + " seconds\n");
 
 	// Apply 
 	meshData.getVertices().assign(vertices.begin(), vertices.end());
