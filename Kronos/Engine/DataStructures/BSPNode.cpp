@@ -44,7 +44,9 @@ bool BSPNode::isLessThanZero(const float& x)
 
 bool BSPNode::inSameHalfSpace(const float& t0, const float& t1)
 {
-	return (t0 <= 0 && t1 <= 0) || (t0 >= 0 && t1 >= 0);
+	return (this->isLessThanZero(t0) && this->isLessThanZero(t1)) ||
+		(this->isLargerThanZero(t0) && this->isLargerThanZero(t1));
+	//return (t0 <= 0 && t1 <= 0) || (t0 >= 0 && t1 >= 0);
 }
 
 bool BSPNode::isTriangleDegenerate(std::vector<Vertex>& vertices, const uint32_t& index0, const uint32_t& index1, const uint32_t& index2)
@@ -484,10 +486,10 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 					newVert.color = debugColor;
 #endif
 
-					if (vertices.size() == 3646)
+					/*if (vertices.size() == 3646)
 					{
-						Log::warning("dick");
-					}
+						Log::warning("xd");
+					}*/
 
 					// Add new vertex
 					newTriIndices[numNewVerts] = vertices.size();
@@ -545,9 +547,9 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 		else if (numNewVerts == 1)
 		{
 			uint32_t baseIndex =
-				(projT[0] == 0.0f) * 0 +
-				(projT[1] == 0.0f) * 1 +
-				(projT[2] == 0.0f) * 2;
+				(this->isZero(projT[0])) * 0 +
+				(this->isZero(projT[1])) * 1 +
+				(this->isZero(projT[2])) * 2;
 
 			assert(baseIndex >= 0 && baseIndex <= 2);
 
@@ -567,6 +569,10 @@ void BSPNode::splitMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& in
 			secondSideIndices->push_back(triIndices[baseIndex]);
 			secondSideIndices->push_back(triIndices[LOOP_IND(baseIndex + 1)]);
 			secondSideIndices->push_back(newTriIndices[0]);
+		}
+		else if (numNewVerts == 0)
+		{
+			Log::error("No new verts...");
 		}
 	}
 
