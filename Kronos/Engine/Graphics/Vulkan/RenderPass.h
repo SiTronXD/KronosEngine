@@ -16,6 +16,7 @@ public:
 	~RenderPass();
 
 	void createRenderPass();
+	void createImguiRenderPass();
 
 	void cleanup();
 

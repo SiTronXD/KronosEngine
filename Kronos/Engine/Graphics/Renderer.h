@@ -45,6 +45,8 @@ private:
 	PipelineLayout graphicsPipelineLayout;
 	Pipeline graphicsPipeline;
 
+	RenderPass imguiRenderPass;
+
 	CommandPool commandPool;
 	CommandPool singleTimeCommandPool;
 	CommandBufferArray commandBuffers;
@@ -67,7 +69,10 @@ private:
 
 	Texture texture;
 
+	ImGui_ImplVulkanH_Window wd;
+
 	void initVulkan();
+	void initImgui();
 
 	void createUniformBuffers();
 	void createSyncObjects();
@@ -75,6 +80,9 @@ private:
 	void updateUniformBuffer(uint32_t currentImage, Camera& camera);
 
 	void recordCommandBuffer(uint32_t imageIndex, Mesh& mesh);
+
+	void resizeWindow();
+	void cleanupImgui();
 
 public:
 	bool framebufferResized = false;
@@ -101,6 +109,7 @@ public:
 	inline CommandPool& getSingleTimeCommandPool() { return this->singleTimeCommandPool; }
 	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
 	inline RenderPass& getRenderPass() { return this->renderPass; }
+	inline RenderPass& getImguiRenderPass() { return this->imguiRenderPass; }
 	inline Swapchain& getSwapchain() { return this->swapchain; }
 	inline Window& getWindow() { return *this->window; }
 	inline DescriptorPool& getImguiDescriptorPool() { return this->imguiDescriptorPool; }

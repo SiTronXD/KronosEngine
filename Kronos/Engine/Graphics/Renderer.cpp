@@ -6,6 +6,10 @@
 #include <set>
 #include <chrono>
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_vulkan.h>
+
 const std::vector<const char*> validationLayers =
 {
 	"VK_LAYER_KHRONOS_validation"
@@ -57,6 +61,7 @@ void Renderer::initVulkan()
 	this->queueFamilies.extractQueueHandles(this->getVkDevice());
 	this->swapchain.createSwapchain();
 	this->renderPass.createRenderPass();
+	this->imguiRenderPass.createImguiRenderPass();
 	this->descriptorSetLayout.createDescriptorSetLayout();
 	this->graphicsPipelineLayout.createPipelineLayout(this->descriptorSetLayout);
 	this->graphicsPipeline.createGraphicsPipeline(
@@ -88,8 +93,48 @@ void Renderer::initVulkan()
 	this->createSyncObjects();
 }
 
+static void checkVkResult(VkResult err)
+{
+	if (err == 0)
+		return;
+
+	Log::error("Vulkan error: " + std::to_string(err));
+}
+
+void Renderer::initImgui()
+{
+	// Imgui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplGlfw_InitForVulkan(this->window->getWindowHandle(), true);
+	ImGui_ImplVulkan_InitInfo initInfo = {};
+	initInfo.Instance = this->getVkInstance();
+	initInfo.PhysicalDevice = this->getVkPhysicalDevice();
+	initInfo.Device = this->getVkDevice();
+	initInfo.QueueFamily = this->queueFamilies.getIndices().graphicsFamily.value();
+	initInfo.Queue = this->queueFamilies.getVkGraphicsQueue();
+	initInfo.PipelineCache = VK_NULL_HANDLE;
+	initInfo.DescriptorPool = this->imguiDescriptorPool.getVkDescriptorPool();
+	initInfo.Allocator = nullptr;
+	initInfo.MinImageCount = this->swapchain.getMinImageCount();
+	initInfo.ImageCount = this->swapchain.getImageCount();
+	initInfo.CheckVkResultFn = checkVkResult;
+	ImGui_ImplVulkan_Init(&initInfo, this->imguiRenderPass.getVkRenderPass());
+
+	// Upload font to gpu
+	VkCommandBuffer tempCommandBuffer = CommandBuffer::beginSingleTimeCommands(*this);
+	ImGui_ImplVulkan_CreateFontsTexture(tempCommandBuffer);
+	CommandBuffer::endSingleTimeCommands(*this, tempCommandBuffer);
+}
+
 void Renderer::cleanup()
 {
+	this->cleanupImgui();
+
 	this->swapchain.cleanup();
 
 	this->texture.cleanup();
@@ -115,6 +160,7 @@ void Renderer::cleanup()
 	this->graphicsPipeline.cleanup();
 	this->graphicsPipelineLayout.cleanup();
 	this->descriptorSetLayout.cleanup();
+	this->imguiRenderPass.cleanup();
 	this->renderPass.cleanup();
 	this->device.cleanup();
 	this->debugMessenger.cleanup();
@@ -184,6 +230,13 @@ void Renderer::createSyncObjects()
 
 void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 {
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	ImGui::ShowDemoWindow();
+	ImGui::Render();
+
+
 	// Wait, then reset fence
 	vkWaitForFences(
 		this->getVkDevice(), 
@@ -207,7 +260,7 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	// Window resize?
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 	{
-		this->swapchain.recreate();
+		this->resizeWindow();
 		return;
 	}
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -272,7 +325,7 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 		this->framebufferResized)
 	{
 		this->framebufferResized = false;
-		this->swapchain.recreate();
+		this->resizeWindow();
 	}
 	else if (result != VK_SUCCESS)
 	{
@@ -394,6 +447,30 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
 	commandBuffer.end();
 }
 
+void Renderer::resizeWindow()
+{
+	this->swapchain.recreate();
+
+	ImGui_ImplVulkan_SetMinImageCount(this->swapchain.getMinImageCount());
+	ImGui_ImplVulkanH_CreateOrResizeWindow(
+		this->getVkInstance(),
+		this->getVkPhysicalDevice(),
+		this->getVkDevice(),
+		&this->wd,
+		this->queueFamilies.getIndices().graphicsFamily.value(),
+		nullptr,
+		this->swapchain.getWidth(),
+		this->swapchain.getHeight(),
+		this->swapchain.getMinImageCount()
+	);
+}
+
+void Renderer::cleanupImgui()
+{
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+}
+
 Renderer::Renderer()
 	: window(nullptr),
 
@@ -403,6 +480,7 @@ Renderer::Renderer()
 	surface(*this),
 	device(*this),
 	renderPass(*this),
+	imguiRenderPass(*this),
 	descriptorSetLayout(*this),
 	graphicsPipelineLayout(*this),
 	graphicsPipeline(*this),
@@ -423,6 +501,7 @@ Renderer::~Renderer()
 void Renderer::init()
 {
 	this->initVulkan();
+	this->initImgui();
 }
 
 void Renderer::setWindow(Window& window)
