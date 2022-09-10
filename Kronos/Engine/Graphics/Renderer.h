@@ -58,10 +58,8 @@ private:
 	// Imgui
 	RenderPass imguiRenderPass;
 	DescriptorPool imguiDescriptorPool;
-	CommandPool imguiCommandPool;
-	CommandBufferArray imguiCommandBuffers;
 	std::vector<VkFramebuffer> imguiFramebuffers;
-	ImGuiIO imguiIO;
+	ImGuiIO* imguiIO;
 
 	// TODO: make wrappers for these
 	std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -85,9 +83,9 @@ private:
 
 	void updateUniformBuffer(uint32_t currentImage, Camera& camera);
 
-	void recordCommandBuffer(uint32_t imageIndex, Mesh& mesh);
-	void recordCommandBufferImgui(
+	void recordCommandBuffer(
 		uint32_t imageIndex, 
+		Mesh& mesh,
 		ImDrawData* drawData);
 
 	void resizeWindow();

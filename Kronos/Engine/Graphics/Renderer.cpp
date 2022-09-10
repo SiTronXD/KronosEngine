@@ -91,8 +91,6 @@ void Renderer::initVulkan()
 	// Imgui
 	this->imguiRenderPass.createImguiRenderPass();
 	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-	this->imguiCommandPool.create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-	this->imguiCommandBuffers.createCommandBuffers(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
 
 	this->imguiFramebuffers.resize(this->swapchain.getImageCount());
 	for (size_t i = 0; i < this->swapchain.getImageCount(); ++i)
@@ -134,16 +132,16 @@ void Renderer::initImgui()
 	// Imgui
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	this->imguiIO = ImGui::GetIO(); (void)this->imguiIO;
-	this->imguiIO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-	this->imguiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-	this->imguiIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+	this->imguiIO = &ImGui::GetIO(); (void)this->imguiIO;
+	this->imguiIO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+	this->imguiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+	this->imguiIO->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 
 	ImGui::StyleColorsDark();
 
 	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
 	ImGuiStyle& style = ImGui::GetStyle();
-	if (this->imguiIO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	if (this->imguiIO->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		style.WindowRounding = 0.0f;
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
@@ -320,19 +318,13 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	// Only reset the fence if we are submitting work
 	vkResetFences(this->getVkDevice(), 1, &this->inFlightFences[this->currentFrameIndex]);
 
-	// Record command buffer
-	this->recordCommandBuffer(imageIndex, mesh);
-
-	// Record imgui command buffer
 	ImDrawData* drawData = ImGui::GetDrawData();
-	const bool mainIsMinimized = 
-		(drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f);
-	if(!mainIsMinimized)
-		this->recordCommandBufferImgui(imageIndex, drawData);
 
+	// Record command buffer
+	this->recordCommandBuffer(imageIndex, mesh, drawData);
 
 	// Update and Render additional Platform Windows
-	if (this->imguiIO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	if (this->imguiIO->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
@@ -343,18 +335,14 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkCommandBuffer submitCommandBuffers[] =
-	{
-		this->commandBuffers.getCommandBuffer(this->currentFrameIndex).getVkCommandBuffer(),
-		this->imguiCommandBuffers.getCommandBuffer(this->currentFrameIndex).getVkCommandBuffer()
-	};
 	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrameIndex] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 2;
-	submitInfo.pCommandBuffers = submitCommandBuffers;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = 
+		&this->commandBuffers.getCommandBuffer(this->currentFrameIndex).getVkCommandBuffer();
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrameIndex] };
 	submitInfo.signalSemaphoreCount = 1;
@@ -449,7 +437,10 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 	vkUnmapMemory(this->getVkDevice(), this->uniformBuffersMemory[currentImage]);
 }
 
-void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
+void Renderer::recordCommandBuffer(
+	uint32_t imageIndex, 
+	Mesh& mesh,
+	ImDrawData* drawData)
 {
 	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrameIndex);
 
@@ -510,55 +501,25 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
 		// End render pass
 		commandBuffer.endRenderPass();
 
-	// Stop recording
-	commandBuffer.end();
-}
-
-void Renderer::recordCommandBufferImgui(
-	uint32_t imageIndex, 
-	ImDrawData* drawData)
-{
-	CommandBuffer& imGuiCommandBuffer = this->imguiCommandBuffers.getCommandBuffer(this->currentFrameIndex);
-
-	// Begin
-	imGuiCommandBuffer.resetAndBegin();
-
-		// Record dynamic viewport
-		/*float swapchainHeight = (float)this->swapchain.getHeight();
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = swapchainHeight;
-		viewport.width = static_cast<float>(this->swapchain.getWidth());
-		viewport.height = -swapchainHeight;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		imGuiCommandBuffer.setViewport(viewport);
-
-		// Record dynamic scissor
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = this->swapchain.getVkExtent();
-		imGuiCommandBuffer.setScissor(scissor);*/
-
 		// Begin render pass
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = this->imguiRenderPass.getVkRenderPass();
-		renderPassInfo.framebuffer = this->imguiFramebuffers[imageIndex];
-		renderPassInfo.renderArea.extent = this->swapchain.getVkExtent();
-		renderPassInfo.clearValueCount = 0;
+		VkRenderPassBeginInfo renderPassInfoImgui{};
+		renderPassInfoImgui.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfoImgui.renderPass = this->imguiRenderPass.getVkRenderPass();
+		renderPassInfoImgui.framebuffer = this->imguiFramebuffers[imageIndex];
+		renderPassInfoImgui.renderArea.extent = this->swapchain.getVkExtent();
+		renderPassInfoImgui.clearValueCount = 0;
 
 		// Record beginning render pass
-		imGuiCommandBuffer.beginRenderPass(renderPassInfo);
+		commandBuffer.beginRenderPass(renderPassInfoImgui);
 
-			// Record imgui primitives into it's command buffer
-			ImGui_ImplVulkan_RenderDrawData(drawData, imGuiCommandBuffer.getVkCommandBuffer());
+		// Record imgui primitives into it's command buffer
+		ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer.getVkCommandBuffer());
 
 		// End render pass
-		imGuiCommandBuffer.endRenderPass();
+		commandBuffer.endRenderPass();
 
-	// End recording
-	imGuiCommandBuffer.end();
+	// Stop recording
+	commandBuffer.end();
 }
 
 void Renderer::resizeWindow()
@@ -573,8 +534,6 @@ void Renderer::cleanupImgui()
 	for (auto framebuffer : this->imguiFramebuffers)
 		vkDestroyFramebuffer(this->getVkDevice(), framebuffer, nullptr);
 
-	this->imguiCommandBuffers.cleanup();
-	this->imguiCommandPool.cleanup();
 	this->imguiRenderPass.cleanup();
 
 	ImGui_ImplVulkan_Shutdown();
@@ -604,8 +563,7 @@ Renderer::Renderer()
 
 	imguiRenderPass(*this),
 	imguiDescriptorPool(*this),
-	imguiCommandPool(*this),
-	imguiCommandBuffers(*this, imguiCommandPool)
+	imguiIO(nullptr)
 {
 }
 
