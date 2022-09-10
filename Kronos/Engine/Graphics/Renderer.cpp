@@ -149,6 +149,14 @@ void Renderer::initImgui()
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
 
+	// Change colors to approximately handle SRGB swapchain format
+	for (uint32_t i = 0; i < ImGuiCol_COUNT; ++i)
+	{
+		style.Colors[i].x = std::pow(style.Colors[i].x, 2.2f);
+		style.Colors[i].y = std::pow(style.Colors[i].y, 2.2f);
+		style.Colors[i].z = std::pow(style.Colors[i].z, 2.2f);
+	}
+
 	ImGui_ImplGlfw_InitForVulkan(this->window->getWindowHandle(), true);
 	ImGui_ImplVulkan_InitInfo initInfo = {};
 	initInfo.Instance = this->getVkInstance();
