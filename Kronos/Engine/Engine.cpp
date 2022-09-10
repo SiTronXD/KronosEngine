@@ -4,6 +4,19 @@
 #include "Graphics/Mesh.h"
 #include "DataStructures/BSP.h"
 
+void Engine::updateImgui()
+{
+	// Start
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::ShowDemoWindow();
+
+	// End
+	ImGui::Render();
+}
+
 Engine::Engine()
 {
 }
@@ -85,6 +98,8 @@ void Engine::init()
 			wireframe = !wireframe;
 			renderer.setToWireframe(wireframe);
 		}
+
+		this->updateImgui();
 
 		// Render
 		// TODO: change to scene submission rather

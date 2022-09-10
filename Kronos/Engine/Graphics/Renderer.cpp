@@ -84,14 +84,6 @@ void Renderer::initVulkan()
 		this->texture);
 
 	this->createSyncObjects();
-
-
-
-
-	// Imgui
-	this->imguiRenderPass.createImguiRenderPass();
-	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-	this->imguiFramebuffers.createImguiFramebuffers(this->swapchain, this->imguiRenderPass);
 }
 
 static void checkVkResult(VkResult err)
@@ -104,6 +96,11 @@ static void checkVkResult(VkResult err)
 
 void Renderer::initImgui()
 {
+	// Vulkan objects interacting with imgui
+	this->imguiRenderPass.createImguiRenderPass();
+	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+	this->imguiFramebuffers.createImguiFramebuffers(this->swapchain, this->imguiRenderPass);
+
 	// Imgui
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -149,7 +146,6 @@ void Renderer::initImgui()
 	VkCommandBuffer tempCommandBuffer = CommandBuffer::beginSingleTimeCommands(*this);
 	ImGui_ImplVulkan_CreateFontsTexture(tempCommandBuffer);
 	CommandBuffer::endSingleTimeCommands(*this, tempCommandBuffer);
-
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
@@ -158,9 +154,7 @@ void Renderer::cleanup()
 	this->cleanupImgui();
 
 	this->swapchain.cleanup();
-
 	this->texture.cleanup();
-
 	this->descriptorPool.cleanup();
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
@@ -250,13 +244,6 @@ void Renderer::createSyncObjects()
 
 void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 {
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-	ImGui::ShowDemoWindow();
-	ImGui::Render();
-
-
 	// Wait, then reset fence
 	vkWaitForFences(
 		this->getVkDevice(), 
@@ -293,10 +280,8 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	// Only reset the fence if we are submitting work
 	vkResetFences(this->getVkDevice(), 1, &this->inFlightFences[this->currentFrameIndex]);
 
-	ImDrawData* drawData = ImGui::GetDrawData();
-
 	// Record command buffer
-	this->recordCommandBuffer(imageIndex, mesh, drawData);
+	this->recordCommandBuffer(imageIndex, mesh);
 
 	// Update and Render additional Platform Windows
 	if (this->imguiIO->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -304,7 +289,6 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
-
 
 	// Info for submitting command buffer
 	VkSubmitInfo submitInfo{};
@@ -389,11 +373,6 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 
 	// Create ubo struct with matrix data
 	UniformBufferObject ubo{};
-	/*ubo.model = glm::rotate(
-		glm::mat4(1.0f),
-		time * glm::radians(90.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);*/
 	ubo.model = glm::mat4(1.0f);
 	ubo.view = camera.getViewMatrix();
 	ubo.proj = camera.getProjectionMatrix();
@@ -414,9 +393,10 @@ void Renderer::updateUniformBuffer(uint32_t currentImage, Camera& camera)
 
 void Renderer::recordCommandBuffer(
 	uint32_t imageIndex, 
-	Mesh& mesh,
-	ImDrawData* drawData)
+	Mesh& mesh)
 {
+	ImDrawData* drawData = ImGui::GetDrawData();
+
 	CommandBuffer& commandBuffer = this->commandBuffers.getCommandBuffer(this->currentFrameIndex);
 
 	// Begin
@@ -501,18 +481,21 @@ void Renderer::resizeWindow()
 {
 	this->swapchain.recreate();
 
+	this->imguiFramebuffers.cleanup();
+	this->imguiFramebuffers.createImguiFramebuffers(this->swapchain, this->imguiRenderPass);
+
 	ImGui_ImplVulkan_SetMinImageCount(this->swapchain.getMinImageCount());
 }
 
 void Renderer::cleanupImgui()
 {
-	this->imguiFramebuffers.cleanup();
-	this->imguiRenderPass.cleanup();
-
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+
 	this->imguiDescriptorPool.cleanup();
+	this->imguiFramebuffers.cleanup();
+	this->imguiRenderPass.cleanup();
 }
 
 Renderer::Renderer()

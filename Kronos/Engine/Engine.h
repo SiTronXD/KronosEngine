@@ -8,6 +8,8 @@ private:
 	Window window;
 	Renderer renderer;
 
+	void updateImgui();
+
 public:
 	Engine();
 	~Engine();

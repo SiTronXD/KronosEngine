@@ -85,8 +85,7 @@ private:
 
 	void recordCommandBuffer(
 		uint32_t imageIndex, 
-		Mesh& mesh,
-		ImDrawData* drawData);
+		Mesh& mesh);
 
 	void resizeWindow();
 	void cleanupImgui();
