@@ -93,6 +93,32 @@ void Renderer::initVulkan()
 	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
 	this->imguiCommandPool.create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->imguiCommandBuffers.createCommandBuffers(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+
+	this->imguiFramebuffers.resize(this->swapchain.getImageCount());
+	for (size_t i = 0; i < this->swapchain.getImageCount(); ++i)
+	{
+		std::array<VkImageView, 1> attachments =
+		{
+			this->swapchain.getImageView(i)
+		};
+
+		VkFramebufferCreateInfo framebufferInfo{};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = this->imguiRenderPass.getVkRenderPass();
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
+		framebufferInfo.width = this->swapchain.getWidth();
+		framebufferInfo.height = this->swapchain.getHeight();
+		framebufferInfo.layers = 1;
+		if (vkCreateFramebuffer(
+			this->getVkDevice(),
+			&framebufferInfo,
+			nullptr,
+			&this->imguiFramebuffers[i]) != VK_SUCCESS)
+		{
+			Log::error("Failed to create imgui framebuffer.");
+		}
+	}
 }
 
 static void checkVkResult(VkResult err)
@@ -108,9 +134,20 @@ void Renderer::initImgui()
 	// Imgui
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	this->imguiIO = ImGui::GetIO(); (void)this->imguiIO;
+	this->imguiIO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+	this->imguiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+	this->imguiIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 
 	ImGui::StyleColorsDark();
+
+	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+	ImGuiStyle& style = ImGui::GetStyle();
+	if (this->imguiIO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		style.WindowRounding = 0.0f;
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+	}
 
 	ImGui_ImplGlfw_InitForVulkan(this->window->getWindowHandle(), true);
 	ImGui_ImplVulkan_InitInfo initInfo = {};
@@ -131,6 +168,8 @@ void Renderer::initImgui()
 	VkCommandBuffer tempCommandBuffer = CommandBuffer::beginSingleTimeCommands(*this);
 	ImGui_ImplVulkan_CreateFontsTexture(tempCommandBuffer);
 	CommandBuffer::endSingleTimeCommands(*this, tempCommandBuffer);
+
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 void Renderer::cleanup()
@@ -276,18 +315,38 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 	// Record command buffer
 	this->recordCommandBuffer(imageIndex, mesh);
 
+	// Record imgui command buffer
+	ImDrawData* drawData = ImGui::GetDrawData();
+	const bool mainIsMinimized = 
+		(drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f);
+	if(!mainIsMinimized)
+		this->recordCommandBufferImgui(imageIndex, drawData);
+
+
+	// Update and Render additional Platform Windows
+	if (this->imguiIO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+	}
+
+
 	// Info for submitting command buffer
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
+	VkCommandBuffer submitCommandBuffers[] =
+	{
+		this->commandBuffers.getCommandBuffer(this->currentFrameIndex).getVkCommandBuffer(),
+		this->imguiCommandBuffers.getCommandBuffer(this->currentFrameIndex).getVkCommandBuffer()
+	};
 	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrameIndex] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = 
-		&this->commandBuffers.getCommandBuffer(this->currentFrameIndex).getVkCommandBuffer();
+	submitInfo.commandBufferCount = 2;
+	submitInfo.pCommandBuffers = submitCommandBuffers;
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrameIndex] };
 	submitInfo.signalSemaphoreCount = 1;
@@ -447,61 +506,50 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
 	commandBuffer.end();
 }
 
-void Renderer::recordCommandBufferImgui(uint32_t imageIndex)
+void Renderer::recordCommandBufferImgui(
+	uint32_t imageIndex, 
+	ImDrawData* drawData)
 {
 	CommandBuffer& imGuiCommandBuffer = this->imguiCommandBuffers.getCommandBuffer(this->currentFrameIndex);
 
 	// Begin
 	imGuiCommandBuffer.resetAndBegin();
 
-	// Record dynamic viewport
-	float swapchainHeight = (float)this->swapchain.getHeight();
-	VkViewport viewport{};
-	viewport.x = 0.0f;
-	viewport.y = swapchainHeight;
-	viewport.width = static_cast<float>(this->swapchain.getWidth());
-	viewport.height = -swapchainHeight;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-	imGuiCommandBuffer.setViewport(viewport);
+		// Record dynamic viewport
+		/*float swapchainHeight = (float)this->swapchain.getHeight();
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = swapchainHeight;
+		viewport.width = static_cast<float>(this->swapchain.getWidth());
+		viewport.height = -swapchainHeight;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		imGuiCommandBuffer.setViewport(viewport);
 
-	// Record dynamic scissor
-	VkRect2D scissor{};
-	scissor.offset = { 0, 0 };
-	scissor.extent = this->swapchain.getVkExtent();
-	imGuiCommandBuffer.setScissor(scissor);
+		// Record dynamic scissor
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = this->swapchain.getVkExtent();
+		imGuiCommandBuffer.setScissor(scissor);*/
 
-	// Begin render pass
-	VkRenderPassBeginInfo renderPassInfo{};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = this->renderPass.getVkRenderPass();
-	renderPassInfo.framebuffer = this->swapchain.getVkFramebuffer(imageIndex);
-	renderPassInfo.renderArea.offset = { 0, 0 };
-	renderPassInfo.renderArea.extent = this->swapchain.getVkExtent();
+		// Begin render pass
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = this->imguiRenderPass.getVkRenderPass();
+		renderPassInfo.framebuffer = this->imguiFramebuffers[imageIndex];
+		renderPassInfo.renderArea.extent = this->swapchain.getVkExtent();
+		renderPassInfo.clearValueCount = 0;
 
-	// Clear values, for color and depth
-	std::array<VkClearValue, 2> clearValues{};
-	clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-	clearValues[1].depthStencil = { 1.0f, 0 };
-	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-	renderPassInfo.pClearValues = clearValues.data();
+		// Record beginning render pass
+		imGuiCommandBuffer.beginRenderPass(renderPassInfo);
 
-	// Record beginning render pass
-	imGuiCommandBuffer.beginRenderPass(renderPassInfo);
+			// Record imgui primitives into it's command buffer
+			ImGui_ImplVulkan_RenderDrawData(drawData, imGuiCommandBuffer.getVkCommandBuffer());
 
-	// Record binding graphics pipeline
-	imGuiCommandBuffer.bindPipeline(this->graphicsPipeline);
+		// End render pass
+		imGuiCommandBuffer.endRenderPass();
 
-	// Record binding descriptor sets
-	imGuiCommandBuffer.bindDescriptorSet(
-		this->graphicsPipelineLayout,
-		this->descriptorSets.getDescriptorSet(this->currentFrameIndex)
-	);
-
-	// End render pass
-	imGuiCommandBuffer.endRenderPass();
-
-	// Stop recording
+	// End recording
 	imGuiCommandBuffer.end();
 }
 
@@ -510,28 +558,21 @@ void Renderer::resizeWindow()
 	this->swapchain.recreate();
 
 	ImGui_ImplVulkan_SetMinImageCount(this->swapchain.getMinImageCount());
-	ImGui_ImplVulkanH_CreateOrResizeWindow(
-		this->getVkInstance(),
-		this->getVkPhysicalDevice(),
-		this->getVkDevice(),
-		&this->wd,
-		this->queueFamilies.getIndices().graphicsFamily.value(),
-		nullptr,
-		this->swapchain.getWidth(),
-		this->swapchain.getHeight(),
-		this->swapchain.getMinImageCount()
-	);
 }
 
 void Renderer::cleanupImgui()
 {
-	ImGui_ImplVulkan_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
+	for (auto framebuffer : this->imguiFramebuffers)
+		vkDestroyFramebuffer(this->getVkDevice(), framebuffer, nullptr);
 
 	this->imguiCommandBuffers.cleanup();
 	this->imguiCommandPool.cleanup();
-	this->imguiDescriptorPool.cleanup();
 	this->imguiRenderPass.cleanup();
+
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	this->imguiDescriptorPool.cleanup();
 }
 
 Renderer::Renderer()

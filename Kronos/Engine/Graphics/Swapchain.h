@@ -58,6 +58,7 @@ public:
 	inline const VkFormat& getVkFormat() const { return this->imageFormat; }
 	inline const VkExtent2D& getVkExtent() const { return this->extent; }
 	inline const VkFramebuffer& getVkFramebuffer(const uint32_t& index) { return this->framebuffers[index]; }
+	inline const VkImageView& getImageView(const uint32_t& index) { return this->imageViews[index]; }
 	inline const uint32_t& getWidth() const { return this->extent.width; }
 	inline const uint32_t& getHeight() const { return this->extent.height; }
 	inline const uint32_t& getMinImageCount() const { return this->minImageCount; }

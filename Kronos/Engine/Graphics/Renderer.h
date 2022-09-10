@@ -60,8 +60,8 @@ private:
 	DescriptorPool imguiDescriptorPool;
 	CommandPool imguiCommandPool;
 	CommandBufferArray imguiCommandBuffers;
-
-	ImGui_ImplVulkanH_Window wd;
+	std::vector<VkFramebuffer> imguiFramebuffers;
+	ImGuiIO imguiIO;
 
 	// TODO: make wrappers for these
 	std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -86,7 +86,9 @@ private:
 	void updateUniformBuffer(uint32_t currentImage, Camera& camera);
 
 	void recordCommandBuffer(uint32_t imageIndex, Mesh& mesh);
-	void recordCommandBufferImgui(uint32_t imageIndex);
+	void recordCommandBufferImgui(
+		uint32_t imageIndex, 
+		ImDrawData* drawData);
 
 	void resizeWindow();
 	void cleanupImgui();
