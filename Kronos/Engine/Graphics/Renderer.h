@@ -1,6 +1,9 @@
 #pragma once
 
 #include <optional>
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_vulkan.h>
 
 #include "../Dev/Log.h"
 #include "../Application/Window.h"
@@ -45,8 +48,6 @@ private:
 	PipelineLayout graphicsPipelineLayout;
 	Pipeline graphicsPipeline;
 
-	RenderPass imguiRenderPass;
-
 	CommandPool commandPool;
 	CommandPool singleTimeCommandPool;
 	CommandBufferArray commandBuffers;
@@ -54,8 +55,15 @@ private:
 	DescriptorPool descriptorPool;
 	DescriptorSetArray descriptorSets;
 
+	// Imgui
+	RenderPass imguiRenderPass;
 	DescriptorPool imguiDescriptorPool;
+	CommandPool imguiCommandPool;
+	CommandBufferArray imguiCommandBuffers;
 
+	ImGui_ImplVulkanH_Window wd;
+
+	// TODO: make wrappers for these
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
@@ -69,8 +77,6 @@ private:
 
 	Texture texture;
 
-	ImGui_ImplVulkanH_Window wd;
-
 	void initVulkan();
 	void initImgui();
 
@@ -80,6 +86,7 @@ private:
 	void updateUniformBuffer(uint32_t currentImage, Camera& camera);
 
 	void recordCommandBuffer(uint32_t imageIndex, Mesh& mesh);
+	void recordCommandBufferImgui(uint32_t imageIndex);
 
 	void resizeWindow();
 	void cleanupImgui();
@@ -109,10 +116,8 @@ public:
 	inline CommandPool& getSingleTimeCommandPool() { return this->singleTimeCommandPool; }
 	inline QueueFamilies& getQueueFamilies() { return this->queueFamilies; }
 	inline RenderPass& getRenderPass() { return this->renderPass; }
-	inline RenderPass& getImguiRenderPass() { return this->imguiRenderPass; }
 	inline Swapchain& getSwapchain() { return this->swapchain; }
 	inline Window& getWindow() { return *this->window; }
-	inline DescriptorPool& getImguiDescriptorPool() { return this->imguiDescriptorPool; }
 
 	inline float getSwapchainAspectRatio() 
 		{ return (float) this->swapchain.getWidth() / this->swapchain.getHeight(); }

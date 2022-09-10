@@ -100,6 +100,13 @@
     <ClCompile Include="Engine\Graphics\Shaders\FragmentShader.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Pipeline.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Instance.cpp" />
+    <ClCompile Include="Linking\Include\imgui\imgui.cpp" />
+    <ClCompile Include="Linking\Include\imgui\imgui_demo.cpp" />
+    <ClCompile Include="Linking\Include\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Linking\Include\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Linking\Include\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="Linking\Include\imgui\imgui_tables.cpp" />
+    <ClCompile Include="Linking\Include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Engine\Graphics\Renderer.cpp" />
     <ClCompile Include="Engine\Application\Window.cpp" />
@@ -157,6 +164,14 @@
     <ClInclude Include="Engine\Graphics\Vulkan\Surface.h" />
     <ClInclude Include="Engine\Graphics\Mesh.h" />
     <ClInclude Include="Engine\Graphics\MeshData.h" />
+    <ClInclude Include="Linking\Include\imgui\imconfig.h" />
+    <ClInclude Include="Linking\Include\imgui\imgui.h" />
+    <ClInclude Include="Linking\Include\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="Linking\Include\imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="Linking\Include\imgui\imgui_internal.h" />
+    <ClInclude Include="Linking\Include\imgui\imstb_rectpack.h" />
+    <ClInclude Include="Linking\Include\imgui\imstb_textedit.h" />
+    <ClInclude Include="Linking\Include\imgui\imstb_truetype.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

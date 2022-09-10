@@ -6,10 +6,6 @@
 #include <set>
 #include <chrono>
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_vulkan.h>
-
 const std::vector<const char*> validationLayers =
 {
 	"VK_LAYER_KHRONOS_validation"
@@ -61,7 +57,6 @@ void Renderer::initVulkan()
 	this->queueFamilies.extractQueueHandles(this->getVkDevice());
 	this->swapchain.createSwapchain();
 	this->renderPass.createRenderPass();
-	this->imguiRenderPass.createImguiRenderPass();
 	this->descriptorSetLayout.createDescriptorSetLayout();
 	this->graphicsPipelineLayout.createPipelineLayout(this->descriptorSetLayout);
 	this->graphicsPipeline.createGraphicsPipeline(
@@ -88,9 +83,16 @@ void Renderer::initVulkan()
 		this->uniformBuffers,
 		this->texture);
 
-	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-
 	this->createSyncObjects();
+
+
+
+
+	// Imgui
+	this->imguiRenderPass.createImguiRenderPass();
+	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+	this->imguiCommandPool.create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	this->imguiCommandBuffers.createCommandBuffers(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
 }
 
 static void checkVkResult(VkResult err)
@@ -139,7 +141,6 @@ void Renderer::cleanup()
 
 	this->texture.cleanup();
 
-	this->imguiDescriptorPool.cleanup();
 	this->descriptorPool.cleanup();
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
@@ -160,7 +161,6 @@ void Renderer::cleanup()
 	this->graphicsPipeline.cleanup();
 	this->graphicsPipelineLayout.cleanup();
 	this->descriptorSetLayout.cleanup();
-	this->imguiRenderPass.cleanup();
 	this->renderPass.cleanup();
 	this->device.cleanup();
 	this->debugMessenger.cleanup();
@@ -447,6 +447,64 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex, Mesh& mesh)
 	commandBuffer.end();
 }
 
+void Renderer::recordCommandBufferImgui(uint32_t imageIndex)
+{
+	CommandBuffer& imGuiCommandBuffer = this->imguiCommandBuffers.getCommandBuffer(this->currentFrameIndex);
+
+	// Begin
+	imGuiCommandBuffer.resetAndBegin();
+
+	// Record dynamic viewport
+	float swapchainHeight = (float)this->swapchain.getHeight();
+	VkViewport viewport{};
+	viewport.x = 0.0f;
+	viewport.y = swapchainHeight;
+	viewport.width = static_cast<float>(this->swapchain.getWidth());
+	viewport.height = -swapchainHeight;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+	imGuiCommandBuffer.setViewport(viewport);
+
+	// Record dynamic scissor
+	VkRect2D scissor{};
+	scissor.offset = { 0, 0 };
+	scissor.extent = this->swapchain.getVkExtent();
+	imGuiCommandBuffer.setScissor(scissor);
+
+	// Begin render pass
+	VkRenderPassBeginInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = this->renderPass.getVkRenderPass();
+	renderPassInfo.framebuffer = this->swapchain.getVkFramebuffer(imageIndex);
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = this->swapchain.getVkExtent();
+
+	// Clear values, for color and depth
+	std::array<VkClearValue, 2> clearValues{};
+	clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+	clearValues[1].depthStencil = { 1.0f, 0 };
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
+
+	// Record beginning render pass
+	imGuiCommandBuffer.beginRenderPass(renderPassInfo);
+
+	// Record binding graphics pipeline
+	imGuiCommandBuffer.bindPipeline(this->graphicsPipeline);
+
+	// Record binding descriptor sets
+	imGuiCommandBuffer.bindDescriptorSet(
+		this->graphicsPipelineLayout,
+		this->descriptorSets.getDescriptorSet(this->currentFrameIndex)
+	);
+
+	// End render pass
+	imGuiCommandBuffer.endRenderPass();
+
+	// Stop recording
+	imGuiCommandBuffer.end();
+}
+
 void Renderer::resizeWindow()
 {
 	this->swapchain.recreate();
@@ -469,6 +527,11 @@ void Renderer::cleanupImgui()
 {
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
+
+	this->imguiCommandBuffers.cleanup();
+	this->imguiCommandPool.cleanup();
+	this->imguiDescriptorPool.cleanup();
+	this->imguiRenderPass.cleanup();
 }
 
 Renderer::Renderer()
@@ -480,7 +543,6 @@ Renderer::Renderer()
 	surface(*this),
 	device(*this),
 	renderPass(*this),
-	imguiRenderPass(*this),
 	descriptorSetLayout(*this),
 	graphicsPipelineLayout(*this),
 	graphicsPipeline(*this),
@@ -489,8 +551,12 @@ Renderer::Renderer()
 	commandBuffers(*this, commandPool),
 	descriptorPool(*this),
 	descriptorSets(*this),
+	swapchain(*this),
+
+	imguiRenderPass(*this),
 	imguiDescriptorPool(*this),
-	swapchain(*this)
+	imguiCommandPool(*this),
+	imguiCommandBuffers(*this, imguiCommandPool)
 {
 }
 
