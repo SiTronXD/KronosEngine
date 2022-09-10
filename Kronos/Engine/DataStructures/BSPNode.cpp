@@ -710,7 +710,7 @@ void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const gl
 	BSPNode* firstNode = this->positiveChild;
 	BSPNode* secondNode = this->negativeChild;
 	//if (this->isLargerThanZero(this->projectPointOnNormal(camPos, this->nodePlane)))
-	if (this->projectPointOnNormal(camPos, this->nodePlane) > 0.0f)
+	if (this->projectPointOnNormal(camPos, this->nodePlane) < 0.0f)
 	{
 		firstNode = this->negativeChild;
 		secondNode = this->positiveChild;

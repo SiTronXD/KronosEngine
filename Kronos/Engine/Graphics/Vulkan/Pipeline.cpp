@@ -118,15 +118,25 @@ void Pipeline::createGraphicsPipeline(
 	// Depth/stencil state
 	VkPipelineDepthStencilStateCreateInfo depthStencilState{};
 	depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+	// Depth testing
 	depthStencilState.depthTestEnable = VK_FALSE; // VK_TRUE VK_FALSE
 	depthStencilState.depthWriteEnable = VK_TRUE;
 	depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
 	depthStencilState.depthBoundsTestEnable = VK_FALSE;
 	depthStencilState.minDepthBounds = 0.0f; // Optional
 	depthStencilState.maxDepthBounds = 1.0f; // Optional
-	depthStencilState.stencilTestEnable = VK_FALSE;
-	depthStencilState.front = {};	// Optional
-	depthStencilState.back = {};		// Optional
+
+	// Stencil testing
+	depthStencilState.stencilTestEnable = VK_TRUE;	// VK_TRUE VK_FALSE
+	depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
+	depthStencilState.front.passOp = VK_STENCIL_OP_REPLACE;
+	depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;
+	depthStencilState.front.compareOp = VK_COMPARE_OP_NOT_EQUAL;
+	depthStencilState.front.compareMask = 0xff;
+	depthStencilState.front.writeMask = 0xff;
+	depthStencilState.front.reference = 1;
+	depthStencilState.back = depthStencilState.front;
 
 	// Graphics pipeline
 	VkGraphicsPipelineCreateInfo pipelineInfo{};

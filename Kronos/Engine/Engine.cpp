@@ -11,12 +11,39 @@ void Engine::updateImgui()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	// Window
 	bool lastRenderWireframe = this->renderWireframe;
 	ImGui::Begin("Settings");
+
+	// Wireframe
 	ImGui::Checkbox("Wireframe", &this->renderWireframe);
-	ImGui::End();
+
+	// Triangle depth mode
+	static bool b1;
+	static bool b2;
+	static bool b3;
+	static bool b4;
+	static bool b5;
+	if (ImGui::BeginMenu("Depth mode"))
+	{
+		b1 = ImGui::Button("BSP back-to-front traversal");
+		b2 = ImGui::Button("BSP front-to-back traversal");
+		b3 = ImGui::Button("BSP front-to-back traversal with stencil masking");
+		b4 = ImGui::Button("Standard depth testing (with BSP-split mesh)");
+		b5 = ImGui::Button("None");
+		ImGui::EndMenu();
+	}
+
+	if(b1 || b2 || b3 || b4 || b5)
+		Log::write(
+			std::to_string(b1) + 
+			std::to_string(b2) + 
+			std::to_string(b3) + 
+			std::to_string(b4) + 
+			std::to_string(b5));
 
 	// End
+	ImGui::End();
 	ImGui::Render();
 
 	// Update settings
