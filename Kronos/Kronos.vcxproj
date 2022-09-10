@@ -100,6 +100,7 @@
     <ClCompile Include="Engine\Graphics\Shaders\FragmentShader.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Pipeline.cpp" />
     <ClCompile Include="Engine\Graphics\Vulkan\Instance.cpp" />
+    <ClCompile Include="Engine\Graphics\Vulkan\FramebufferArray.cpp" />
     <ClCompile Include="Linking\Include\imgui\imgui.cpp" />
     <ClCompile Include="Linking\Include\imgui\imgui_demo.cpp" />
     <ClCompile Include="Linking\Include\imgui\imgui_draw.cpp" />
@@ -164,6 +165,7 @@
     <ClInclude Include="Engine\Graphics\Vulkan\Surface.h" />
     <ClInclude Include="Engine\Graphics\Mesh.h" />
     <ClInclude Include="Engine\Graphics\MeshData.h" />
+    <ClInclude Include="Engine\Graphics\Vulkan\FramebufferArray.h" />
     <ClInclude Include="Linking\Include\imgui\imconfig.h" />
     <ClInclude Include="Linking\Include\imgui\imgui.h" />
     <ClInclude Include="Linking\Include\imgui\imgui_impl_glfw.h" />

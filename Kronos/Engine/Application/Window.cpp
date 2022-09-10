@@ -31,7 +31,7 @@ void Window::init(Renderer& renderer, int width, int height)
 	// Create window
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	this->windowHandle = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
+	this->windowHandle = glfwCreateWindow(width, height, "Kronos", nullptr, nullptr);
 
 	// Set position to center of monitor
 	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());

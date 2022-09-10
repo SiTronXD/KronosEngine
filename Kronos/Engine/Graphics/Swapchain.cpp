@@ -96,6 +96,7 @@ void Swapchain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
 Swapchain::Swapchain(Renderer& renderer)
 	: renderer(renderer),
 	depthTexture(renderer),
+	framebuffers(renderer),
 	swapchain(VK_NULL_HANDLE),
 	imageFormat(VK_FORMAT_A1R5G5B5_UNORM_PACK16),
 	extent(VkExtent2D{}),
@@ -204,33 +205,11 @@ void Swapchain::createFramebuffers()
 		this->getHeight()
 	);
 
-	// Create one framebuffer for each swapchain image view
-	this->framebuffers.resize(this->imageViews.size());
-	for (size_t i = 0; i < this->imageViews.size(); ++i)
-	{
-		std::array<VkImageView, 2> attachments =
-		{
-			this->imageViews[i],
-			depthTexture.getVkImageView()
-		};
-
-		VkFramebufferCreateInfo framebufferInfo{};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = this->renderer.getRenderPass().getVkRenderPass();
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = this->getWidth();
-		framebufferInfo.height = this->getHeight();
-		framebufferInfo.layers = 1;
-		if (vkCreateFramebuffer(
-			this->renderer.getVkDevice(),
-			&framebufferInfo,
-			nullptr,
-			&this->framebuffers[i]) != VK_SUCCESS)
-		{
-			Log::error("Failed to create framebuffer.");
-		}
-	}
+	this->framebuffers.createFramebuffers(
+		this->depthTexture, 
+		*this, 
+		this->renderer.getRenderPass()
+	);
 }
 
 void Swapchain::recreate()
@@ -262,9 +241,7 @@ void Swapchain::cleanup()
 	VkDevice& device = this->renderer.getVkDevice();
 
 	this->depthTexture.cleanup();
-
-	for (auto framebuffer : this->framebuffers)
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
+	this->framebuffers.cleanup();
 
 	for (auto imageView : this->imageViews)
 		vkDestroyImageView(device, imageView, nullptr);

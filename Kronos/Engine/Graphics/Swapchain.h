@@ -3,6 +3,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Vulkan/FramebufferArray.h"
 #include "Texture.h"
 
 struct SwapchainSupportDetails
@@ -18,9 +19,9 @@ private:
 	VkSwapchainKHR swapchain;
 	VkFormat imageFormat;
 	VkExtent2D extent;
+	FramebufferArray framebuffers;
 	std::vector<VkImage> images;
 	std::vector<VkImageView> imageViews;
-	std::vector<VkFramebuffer> framebuffers;
 
 	Texture depthTexture;
 
@@ -57,7 +58,7 @@ public:
 	inline const VkSwapchainKHR& getVkSwapchain() { return this->swapchain; }
 	inline const VkFormat& getVkFormat() const { return this->imageFormat; }
 	inline const VkExtent2D& getVkExtent() const { return this->extent; }
-	inline const VkFramebuffer& getVkFramebuffer(const uint32_t& index) { return this->framebuffers[index]; }
+	inline const VkFramebuffer& getVkFramebuffer(const uint32_t& index) { return this->framebuffers.getVkFramebuffer(index); }
 	inline const VkImageView& getImageView(const uint32_t& index) { return this->imageViews[index]; }
 	inline const uint32_t& getWidth() const { return this->extent.width; }
 	inline const uint32_t& getHeight() const { return this->extent.height; }

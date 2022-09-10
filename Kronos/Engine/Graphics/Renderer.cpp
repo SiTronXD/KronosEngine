@@ -91,32 +91,7 @@ void Renderer::initVulkan()
 	// Imgui
 	this->imguiRenderPass.createImguiRenderPass();
 	this->imguiDescriptorPool.createImguiDescriptorPool(static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-
-	this->imguiFramebuffers.resize(this->swapchain.getImageCount());
-	for (size_t i = 0; i < this->swapchain.getImageCount(); ++i)
-	{
-		std::array<VkImageView, 1> attachments =
-		{
-			this->swapchain.getImageView(i)
-		};
-
-		VkFramebufferCreateInfo framebufferInfo{};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = this->imguiRenderPass.getVkRenderPass();
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = this->swapchain.getWidth();
-		framebufferInfo.height = this->swapchain.getHeight();
-		framebufferInfo.layers = 1;
-		if (vkCreateFramebuffer(
-			this->getVkDevice(),
-			&framebufferInfo,
-			nullptr,
-			&this->imguiFramebuffers[i]) != VK_SUCCESS)
-		{
-			Log::error("Failed to create imgui framebuffer.");
-		}
-	}
+	this->imguiFramebuffers.createImguiFramebuffers(this->swapchain, this->imguiRenderPass);
 }
 
 static void checkVkResult(VkResult err)
@@ -505,7 +480,7 @@ void Renderer::recordCommandBuffer(
 		VkRenderPassBeginInfo renderPassInfoImgui{};
 		renderPassInfoImgui.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfoImgui.renderPass = this->imguiRenderPass.getVkRenderPass();
-		renderPassInfoImgui.framebuffer = this->imguiFramebuffers[imageIndex];
+		renderPassInfoImgui.framebuffer = this->imguiFramebuffers.getVkFramebuffer(imageIndex);
 		renderPassInfoImgui.renderArea.extent = this->swapchain.getVkExtent();
 		renderPassInfoImgui.clearValueCount = 0;
 
@@ -531,9 +506,7 @@ void Renderer::resizeWindow()
 
 void Renderer::cleanupImgui()
 {
-	for (auto framebuffer : this->imguiFramebuffers)
-		vkDestroyFramebuffer(this->getVkDevice(), framebuffer, nullptr);
-
+	this->imguiFramebuffers.cleanup();
 	this->imguiRenderPass.cleanup();
 
 	ImGui_ImplVulkan_Shutdown();
@@ -563,6 +536,7 @@ Renderer::Renderer()
 
 	imguiRenderPass(*this),
 	imguiDescriptorPool(*this),
+	imguiFramebuffers(*this),
 	imguiIO(nullptr)
 {
 }

@@ -58,7 +58,7 @@ private:
 	// Imgui
 	RenderPass imguiRenderPass;
 	DescriptorPool imguiDescriptorPool;
-	std::vector<VkFramebuffer> imguiFramebuffers;
+	FramebufferArray imguiFramebuffers;
 	ImGuiIO* imguiIO;
 
 	// TODO: make wrappers for these
