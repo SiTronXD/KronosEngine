@@ -8,6 +8,8 @@ private:
 	Window window;
 	Renderer renderer;
 
+	bool renderWireframe;
+
 	void updateImgui();
 
 public:

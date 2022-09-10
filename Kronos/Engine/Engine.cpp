@@ -11,13 +11,23 @@ void Engine::updateImgui()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::ShowDemoWindow();
+	bool lastRenderWireframe = this->renderWireframe;
+	ImGui::Begin("Settings");
+	ImGui::Checkbox("Wireframe", &this->renderWireframe);
+	ImGui::End();
 
 	// End
 	ImGui::Render();
+
+	// Update settings
+	if (lastRenderWireframe != this->renderWireframe)
+	{
+		this->renderer.setToWireframe(this->renderWireframe);
+	}
 }
 
 Engine::Engine()
+	: renderWireframe(false)
 {
 }
 
@@ -36,9 +46,9 @@ void Engine::init()
 	MeshData meshData;
 	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
 	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
-	//meshData.loadOBJ("Resources/Models/suzanne.obj");
+	meshData.loadOBJ("Resources/Models/suzanne.obj");
 	//meshData.loadOBJ("Resources/Models/sphereTest.obj");
-	meshData.loadOBJ("Resources/Models/lowResSphere.obj");
+	//meshData.loadOBJ("Resources/Models/lowResSphere.obj");
 	//meshData.loadOBJ("Resources/Models/lowResThreeSpheres.obj");
 	//meshData.loadOBJ("Resources/Models/torus.obj");
 
@@ -75,8 +85,6 @@ void Engine::init()
 	Mesh mesh(this->renderer);
 	mesh.createMesh(meshData, true);
 
-	bool wireframe = false;
-
 	// Main loop
 	Time::init();
 	while (this->window.isRunning())
@@ -93,11 +101,6 @@ void Engine::init()
 			this->renderer.getCurrentFrameIndex()
 		);
 
-		if (Input::isKeyPressed(Keys::R))
-		{
-			wireframe = !wireframe;
-			renderer.setToWireframe(wireframe);
-		}
 
 		this->updateImgui();
 
