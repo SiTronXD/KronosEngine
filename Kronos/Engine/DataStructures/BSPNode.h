@@ -74,7 +74,7 @@ public:
 	void replaceEdges(std::map<uint64_t, uint32_t>& createdVertIndex);
 	void getMergedIndices(std::vector<uint32_t>& outputIndices);
 	void traverseBackToFront(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos);
-	//void traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos);
+	void traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos);
 
 	void assignSpaceIndices(std::vector<uint32_t>& indices);
 	void getTreeDepth(uint32_t& value);

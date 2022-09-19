@@ -128,7 +128,7 @@ void Pipeline::createGraphicsPipeline(
 	depthStencilState.maxDepthBounds = 1.0f; // Optional
 
 	// Stencil testing
-	depthStencilState.stencilTestEnable = VK_TRUE;	// VK_TRUE VK_FALSE
+	depthStencilState.stencilTestEnable = VK_FALSE;	// VK_TRUE VK_FALSE
 	depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
 	depthStencilState.front.passOp = VK_STENCIL_OP_REPLACE;
 	depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;

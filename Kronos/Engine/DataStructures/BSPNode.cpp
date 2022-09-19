@@ -707,38 +707,23 @@ void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const gl
 		return;
 	}
 
+	// Find side where the camera is
 	BSPNode* firstNode = this->positiveChild;
 	BSPNode* secondNode = this->negativeChild;
-	//if (this->isLargerThanZero(this->projectPointOnNormal(camPos, this->nodePlane)))
-	if (this->projectPointOnNormal(camPos, this->nodePlane) < 0.0f)
+	if (this->projectPointOnNormal(camPos, this->nodePlane) > 0.0f)
 	{
 		firstNode = this->negativeChild;
 		secondNode = this->positiveChild;
 	}
 
-	/*if (this->isZero(this->projectPointOnNormal(camPos, this->nodePlane)))
-	{
-		Log::write("CAM IN PLANE!!!!");
-		firstNode->traverseBackToFront(outputIndices, camPos);
-		for (size_t i = 0; i < this->nodeIndices.size(); ++i)
-			outputIndices.push_back(0);
-		secondNode->traverseBackToFront(outputIndices, camPos);
-	}
-	else
-	{
-		firstNode->traverseBackToFront(outputIndices, camPos);
-		for (size_t i = 0; i < this->nodeIndices.size(); ++i)
-			outputIndices.push_back(this->nodeIndices[i]);
-		secondNode->traverseBackToFront(outputIndices, camPos);
-	}*/
-
+	// Keep on traversing
 	firstNode->traverseBackToFront(outputIndices, camPos);
 	for (size_t i = 0; i < this->nodeIndices.size(); ++i)
 		outputIndices.push_back(this->nodeIndices[i]);
 	secondNode->traverseBackToFront(outputIndices, camPos);
 }
 
-/*void BSPNode::traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos)
+void BSPNode::traverseFrontToBack(std::vector<uint32_t>& outputIndices, const glm::vec3& camPos)
 {
 	// Leaf node
 	if (!this->negativeChild && !this->positiveChild)
@@ -749,20 +734,21 @@ void BSPNode::traverseBackToFront(std::vector<uint32_t>& outputIndices, const gl
 		return;
 	}
 
-	BSPNode* firstNode = this->negativeChild;
-	BSPNode* secondNode = this->positiveChild;
-	if (this->projectPointOnNormal(camPos, this->nodePlane) > 0.0f)
+	// Find side where the camera is
+	BSPNode* firstNode = this->positiveChild;
+	BSPNode* secondNode = this->negativeChild;
+	if (this->projectPointOnNormal(camPos, this->nodePlane) < 0.0f)
 	{
-		firstNode = this->positiveChild;
-		secondNode = this->negativeChild;
+		firstNode = this->negativeChild;
+		secondNode = this->positiveChild;
 	}
 
-
+	// Keep on traversing
 	firstNode->traverseFrontToBack(outputIndices, camPos);
 	for (size_t i = 0; i < this->nodeIndices.size(); ++i)
 		outputIndices.push_back(this->nodeIndices[i]);
 	secondNode->traverseFrontToBack(outputIndices, camPos);
-}*/
+}
 
 void BSPNode::assignSpaceIndices(std::vector<uint32_t>& indices)
 {

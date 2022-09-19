@@ -2,7 +2,6 @@
 #include "Application/Time.h"
 #include "Application/Input.h"
 #include "Graphics/Mesh.h"
-#include "DataStructures/BSP.h"
 
 void Engine::updateImgui()
 {
@@ -18,33 +17,53 @@ void Engine::updateImgui()
 	// Wireframe
 	ImGui::Checkbox("Wireframe", &this->renderWireframe);
 
+	// Show current depth mode
+	ImGui::Text("");
+	ImGui::Text(("Current depth mode: " + this->depthModeNames[(int) this->currentDepthMode]).c_str());
+	ImGui::Text("");
+
 	// Triangle depth mode
-	static bool b1;
-	static bool b2;
-	static bool b3;
-	static bool b4;
-	static bool b5;
+	DepthMode chosenDepthMode = DepthMode::NONE;
 	if (ImGui::BeginMenu("Depth mode"))
 	{
-		b1 = ImGui::Button("BSP back-to-front traversal");
-		b2 = ImGui::Button("BSP front-to-back traversal");
-		b3 = ImGui::Button("BSP front-to-back traversal with stencil masking");
-		b4 = ImGui::Button("Standard depth testing (with BSP-split mesh)");
-		b5 = ImGui::Button("None");
+		// Loop through all buttons
+		for (size_t i = 0; i < this->depthModeNames.size(); ++i)
+		{
+			// Button was pressed, choose this mode
+			if (ImGui::Button(this->depthModeNames[i].c_str()))
+			{
+				chosenDepthMode = (DepthMode) i;
+				i = this->depthModeNames.size();
+			}
+		}
+
 		ImGui::EndMenu();
 	}
-
-	if(b1 || b2 || b3 || b4 || b5)
-		Log::write(
-			std::to_string(b1) + 
-			std::to_string(b2) + 
-			std::to_string(b3) + 
-			std::to_string(b4) + 
-			std::to_string(b5));
 
 	// End
 	ImGui::End();
 	ImGui::Render();
+
+	// Depth mode switch
+	if (chosenDepthMode != DepthMode::NONE)
+	{
+		switch (chosenDepthMode)
+		{
+		case DepthMode::BSP_BACK_TO_FRONT:
+			this->bsp.setTraversalMode(BspTraversalMode::BACK_TO_FRONT);
+
+			break;
+		case DepthMode::BSP_FRONT_TO_BACK_NO_STENCIL:
+			this->bsp.setTraversalMode(BspTraversalMode::FRONT_TO_BACK);
+
+			break;
+
+		default:
+			break;
+		}
+
+		this->currentDepthMode = chosenDepthMode;
+	}
 
 	// Update settings
 	if (lastRenderWireframe != this->renderWireframe)
@@ -54,8 +73,10 @@ void Engine::updateImgui()
 }
 
 Engine::Engine()
-	: renderWireframe(false)
+	: currentDepthMode(DepthMode::BSP_BACK_TO_FRONT), renderWireframe(false)
 {
+	this->depthModeNames.push_back("BSP back-to-front traversal");
+	this->depthModeNames.push_back("BSP front-to-back traversal");
 }
 
 Engine::~Engine()
@@ -80,8 +101,7 @@ void Engine::init()
 	//meshData.loadOBJ("Resources/Models/torus.obj");
 
 	// BSP to render mesh with
-	BSP bsp;
-	bsp.createFromMeshData(meshData);
+	this->bsp.createFromMeshData(meshData);
 
 	// Randomly create trees and choose the best one
 	/*BSP* bsp = nullptr;
@@ -122,7 +142,7 @@ void Engine::init()
 
 		// "Game logic"
 		camera.update();
-		bsp.traverseTree(meshData, camera.getPosition());
+		this->bsp.traverseTree(meshData, camera.getPosition());
 		mesh.getIndexBuffer().updateIndexBuffer(
 			meshData.getIndices(), 
 			this->renderer.getCurrentFrameIndex()

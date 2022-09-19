@@ -9,8 +9,10 @@ void BSP::deleteRoot()
 }
 
 BSP::BSP()
-	: rootNode(nullptr)
+	: rootNode(nullptr),
+	traverseFunction(&BSPNode::traverseBackToFront)
 {
+
 }
 
 BSP::~BSP()
@@ -75,7 +77,27 @@ void BSP::traverseTree(MeshData& meshData, const glm::vec3& camPos)
 	meshData.getIndices().clear();
 
 	// Fill new indices by traversing tree
-	this->rootNode->traverseBackToFront(meshData.getIndices(), camPos);
+	//this->rootNode->traverseBackToFront(meshData.getIndices(), camPos);
+	//this->rootNode->traverseFrontToBack(meshData.getIndices(), camPos);
+	((this->rootNode)->*(this->traverseFunction))(meshData.getIndices(), camPos);
+}
+
+void BSP::setTraversalMode(const BspTraversalMode& newMode)
+{
+	switch (newMode)
+	{
+	case BspTraversalMode::BACK_TO_FRONT:
+		this->traverseFunction = &BSPNode::traverseBackToFront;
+
+		break;
+	case BspTraversalMode::FRONT_TO_BACK:
+		this->traverseFunction = &BSPNode::traverseFrontToBack;
+
+		break;
+
+	default:
+		break;
+	}
 }
 
 uint32_t BSP::getTreeDepth()
