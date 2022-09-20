@@ -24,11 +24,9 @@ void FramebufferArray::createFramebuffers(
 	this->framebuffers.resize(swapchain.getImageCount());
 	for (size_t i = 0; i < swapchain.getImageCount(); ++i)
 	{
-		std::array<VkImageView, 2> attachments =
-		{
-			swapchain.getImageView(i),
-			depthTexture.getVkImageView()
-		};
+		std::vector<VkImageView> attachments = { swapchain.getImageView(i) };
+		if (renderPass.getBindDepth())
+			attachments.push_back(depthTexture.getVkImageView());
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

@@ -49,6 +49,7 @@ public:
 
 	void recreate();
 	void cleanup();
+	void cleanupFramebuffers();
 
 	static void querySwapChainSupport(
 		VkSurfaceKHR surface, 

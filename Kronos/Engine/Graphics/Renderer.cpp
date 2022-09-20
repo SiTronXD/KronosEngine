@@ -61,7 +61,10 @@ void Renderer::initVulkan()
 	this->graphicsPipelineLayout.createPipelineLayout(this->descriptorSetLayout);
 	this->graphicsPipeline.createGraphicsPipeline(
 		this->graphicsPipelineLayout,
-		this->renderPass
+		this->renderPass,
+		this->renderWireframe,
+		this->useDepthTesting,
+		this->useStencilTesting
 	);
 
 	this->commandPool.create(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -366,10 +369,25 @@ void Renderer::setToWireframe(bool wireframe)
 
 void Renderer::setDepthStencil(bool useDepthTesting, bool useStencilTesting)
 {
+	bool isDepthBufferBound = this->useDepthTesting || this->useStencilTesting;
+	bool bindDepthBuffer = useDepthTesting || useStencilTesting;
+
 	this->useDepthTesting = useDepthTesting;
 	this->useStencilTesting = useStencilTesting;
 
 	vkDeviceWaitIdle(this->getVkDevice());
+
+	// "Bind/unbind" depth buffer to renderpass
+	if (isDepthBufferBound != bindDepthBuffer)
+	{
+		Log::write("Bind info: " + std::to_string(bindDepthBuffer));
+
+		this->renderPass.cleanup();
+		this->swapchain.cleanupFramebuffers();
+
+		this->renderPass.createRenderPass(bindDepthBuffer);
+		this->swapchain.createFramebuffers();
+	}
 
 	this->graphicsPipeline.cleanup();
 	this->graphicsPipeline.createGraphicsPipeline(

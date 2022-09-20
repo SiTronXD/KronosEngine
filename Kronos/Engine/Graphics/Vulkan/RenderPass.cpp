@@ -4,7 +4,8 @@
 
 RenderPass::RenderPass(Renderer& renderer)
 	: renderer(renderer),
-	renderPass(VK_NULL_HANDLE)
+	renderPass(VK_NULL_HANDLE),
+	bindDepth(false)
 {
 }
 
@@ -12,8 +13,10 @@ RenderPass::~RenderPass()
 {
 }
 
-void RenderPass::createRenderPass()
+void RenderPass::createRenderPass(bool bindDepth)
 {
+	this->bindDepth = bindDepth;
+
 	// Color attachment
 	VkAttachmentDescription colorAttachment{};
 	colorAttachment.format = this->renderer.getSwapchain().getVkFormat();
@@ -49,22 +52,30 @@ void RenderPass::createRenderPass()
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
-	subpass.pDepthStencilAttachment = &depthAttachmentRef;
+	if(bindDepth)
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	// Subpass dependency
 	VkSubpassDependency dependency{};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.srcAccessMask = 0;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	if (bindDepth)
+	{
+		dependency.srcStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependency.dstStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependency.srcAccessMask |= 0;
+		dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	}
 
 	// Render pass
-	std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
+	std::vector<VkAttachmentDescription> attachments = { colorAttachment };
+	if (bindDepth)
+		attachments.push_back(depthAttachment);
+
 	VkRenderPassCreateInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());

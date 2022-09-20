@@ -240,13 +240,18 @@ void Swapchain::cleanup()
 {
 	VkDevice& device = this->renderer.getVkDevice();
 
-	this->depthTexture.cleanup();
-	this->framebuffers.cleanup();
+	this->cleanupFramebuffers();
 
 	for (auto imageView : this->imageViews)
 		vkDestroyImageView(device, imageView, nullptr);
 
 	vkDestroySwapchainKHR(device, this->swapchain, nullptr);
+}
+
+void Swapchain::cleanupFramebuffers()
+{
+	this->depthTexture.cleanup();
+	this->framebuffers.cleanup();
 }
 
 void Swapchain::querySwapChainSupport(
