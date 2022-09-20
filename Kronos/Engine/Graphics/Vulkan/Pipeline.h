@@ -17,7 +17,9 @@ public:
 	void createGraphicsPipeline(
 		PipelineLayout& pipelineLayout,
 		const RenderPass& renderPass,
-		bool wireframe = false);
+		bool wireframe = false,
+		bool useDepthTesting = false,
+		bool useStencilTesting = false);
 
 	void cleanup();
 

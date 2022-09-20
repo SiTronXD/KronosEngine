@@ -18,7 +18,9 @@ Pipeline::~Pipeline()
 void Pipeline::createGraphicsPipeline(
 	PipelineLayout& pipelineLayout,
 	const RenderPass& renderPass,
-	bool wireframe)
+	bool wireframe,
+	bool useDepthTesting,
+	bool useStencilTesting)
 {
 	VertexShader vertShader(this->renderer, "Resources/Shaders/vert.spv");
 	FragmentShader fragShader(this->renderer, "Resources/Shaders/frag.spv");
@@ -120,7 +122,7 @@ void Pipeline::createGraphicsPipeline(
 	depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
 	// Depth testing
-	depthStencilState.depthTestEnable = VK_FALSE; // VK_TRUE VK_FALSE
+	depthStencilState.depthTestEnable = useDepthTesting ? VK_TRUE : VK_FALSE;
 	depthStencilState.depthWriteEnable = VK_TRUE;
 	depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
 	depthStencilState.depthBoundsTestEnable = VK_FALSE;
@@ -128,7 +130,7 @@ void Pipeline::createGraphicsPipeline(
 	depthStencilState.maxDepthBounds = 1.0f; // Optional
 
 	// Stencil testing
-	depthStencilState.stencilTestEnable = VK_FALSE;	// VK_TRUE VK_FALSE
+	depthStencilState.stencilTestEnable = useStencilTesting ? VK_TRUE : VK_FALSE;
 	depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
 	depthStencilState.front.passOp = VK_STENCIL_OP_REPLACE;
 	depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;

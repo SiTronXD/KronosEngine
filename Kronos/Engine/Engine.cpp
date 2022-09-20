@@ -19,7 +19,8 @@ void Engine::updateImgui()
 
 	// Show current depth mode
 	ImGui::Text("");
-	ImGui::Text(("Current depth mode: " + this->depthModeNames[(int) this->currentDepthMode]).c_str());
+	ImGui::Text("Current depth mode:");
+	ImGui::Text(this->depthModeNames[(int)this->currentDepthMode].c_str());
 	ImGui::Text("");
 
 	// Triangle depth mode
@@ -51,10 +52,17 @@ void Engine::updateImgui()
 		{
 		case DepthMode::BSP_BACK_TO_FRONT:
 			this->bsp.setTraversalMode(BspTraversalMode::BACK_TO_FRONT);
+			this->renderer.setDepthStencil(false, false);
 
 			break;
-		case DepthMode::BSP_FRONT_TO_BACK_NO_STENCIL:
+		case DepthMode::BSP_FRONT_TO_BACK:
 			this->bsp.setTraversalMode(BspTraversalMode::FRONT_TO_BACK);
+			this->renderer.setDepthStencil(false, false);
+
+			break;
+		case DepthMode::BSP_FRONT_TO_BACK_WITH_STENCIL:
+			this->bsp.setTraversalMode(BspTraversalMode::FRONT_TO_BACK);
+			this->renderer.setDepthStencil(false, true);
 
 			break;
 
@@ -77,6 +85,9 @@ Engine::Engine()
 {
 	this->depthModeNames.push_back("BSP back-to-front traversal");
 	this->depthModeNames.push_back("BSP front-to-back traversal");
+	this->depthModeNames.push_back("BSP front-to-back traversal using stencil buffer");
+	this->depthModeNames.push_back("Standard depth testing (with BSP-split mesh)");
+	this->depthModeNames.push_back("Ignore depth");
 }
 
 Engine::~Engine()

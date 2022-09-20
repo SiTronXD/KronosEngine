@@ -75,6 +75,10 @@ private:
 
 	Texture texture;
 
+	bool renderWireframe;
+	bool useDepthTesting;
+	bool useStencilTesting;
+
 	void initVulkan();
 	void initImgui();
 
@@ -104,6 +108,7 @@ public:
 	void drawFrame(Camera& camera, Mesh& mesh);
 
 	void setToWireframe(bool wireframe);
+	void setDepthStencil(bool useDepthTesting, bool useStencilTesting);
 
 	// Vulkan
 	inline VkInstance& getVkInstance() { return this->instance.getVkInstance(); }

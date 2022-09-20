@@ -352,13 +352,32 @@ void Renderer::drawFrame(Camera& camera, Mesh& mesh)
 
 void Renderer::setToWireframe(bool wireframe)
 {
+	this->renderWireframe = wireframe;
+
 	vkDeviceWaitIdle(this->getVkDevice());
 
 	this->graphicsPipeline.cleanup();
 	this->graphicsPipeline.createGraphicsPipeline(
 		this->graphicsPipelineLayout,
 		this->renderPass,
-		wireframe
+		this->renderWireframe
+	);
+}
+
+void Renderer::setDepthStencil(bool useDepthTestning, bool useStencilTesting)
+{
+	this->useDepthTesting = useDepthTesting;
+	this->useStencilTesting = useStencilTesting;
+
+	vkDeviceWaitIdle(this->getVkDevice());
+
+	this->graphicsPipeline.cleanup();
+	this->graphicsPipeline.createGraphicsPipeline(
+		this->graphicsPipelineLayout,
+		this->renderPass,
+		this->renderWireframe,
+		this->useDepthTesting,
+		this->useStencilTesting
 	);
 }
 
@@ -502,6 +521,9 @@ Renderer::Renderer()
 	: window(nullptr),
 
 	texture(*this),
+	renderWireframe(false),
+	useDepthTesting(false),
+	useStencilTesting(false),
 
 	debugMessenger(*this),
 	surface(*this),
