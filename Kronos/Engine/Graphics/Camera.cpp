@@ -71,12 +71,14 @@ void Camera::update()
 		(float) (Input::isKeyDown(Keys::W) - Input::isKeyDown(Keys::S));
 	float upSpeed =
 		(float) (Input::isKeyDown(Keys::E) - Input::isKeyDown(Keys::Q));
+	float sprintSpeed =
+		(float) Input::isKeyDown(Keys::LEFT_SHIFT) * 2.0f + 1.0f;
 
 	// Move position
 	this->position += 
 		(rightSpeed * this->rightDir +
 		forwardSpeed * this->forwardDir +
-		upSpeed * this->upDir) * this->MOVEMENT_SPEED * Time::getDT();
+		upSpeed * this->upDir) * this->MOVEMENT_SPEED * sprintSpeed * Time::getDT();
 
 	// Mouse input
 	if (Input::isMouseButtonDown(Mouse::RIGHT_BUTTON))

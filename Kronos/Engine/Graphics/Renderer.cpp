@@ -364,7 +364,7 @@ void Renderer::setToWireframe(bool wireframe)
 	);
 }
 
-void Renderer::setDepthStencil(bool useDepthTestning, bool useStencilTesting)
+void Renderer::setDepthStencil(bool useDepthTesting, bool useStencilTesting)
 {
 	this->useDepthTesting = useDepthTesting;
 	this->useStencilTesting = useStencilTesting;

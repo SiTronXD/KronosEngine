@@ -34,6 +34,7 @@ enum class Keys
 	Y = GLFW_KEY_Y,
 	Z = GLFW_KEY_Z,
 
+	LEFT_SHIFT = GLFW_KEY_LEFT_SHIFT,
 	ESCAPE = GLFW_KEY_ESCAPE,
 };
 

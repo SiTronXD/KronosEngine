@@ -8,7 +8,6 @@ enum class DepthMode
 	BSP_BACK_TO_FRONT,
 	BSP_FRONT_TO_BACK,
 	BSP_FRONT_TO_BACK_WITH_STENCIL,
-
 	ONLY_DEPTH_TESTING,
 	IGNORE_DEPTH,
 
@@ -28,6 +27,7 @@ private:
 	DepthMode currentDepthMode;
 
 	bool renderWireframe;
+	bool useBsp;
 
 	void updateImgui();
 

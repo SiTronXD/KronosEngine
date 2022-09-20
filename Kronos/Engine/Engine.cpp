@@ -23,22 +23,19 @@ void Engine::updateImgui()
 	ImGui::Text(this->depthModeNames[(int)this->currentDepthMode].c_str());
 	ImGui::Text("");
 
-	// Triangle depth mode
-	DepthMode chosenDepthMode = DepthMode::NONE;
-	if (ImGui::BeginMenu("Depth mode"))
-	{
-		// Loop through all buttons
-		for (size_t i = 0; i < this->depthModeNames.size(); ++i)
-		{
-			// Button was pressed, choose this mode
-			if (ImGui::Button(this->depthModeNames[i].c_str()))
-			{
-				chosenDepthMode = (DepthMode) i;
-				i = this->depthModeNames.size();
-			}
-		}
+	// Depth modes
+	ImGui::Text("Depth modes:");
 
-		ImGui::EndMenu();
+	// Loop through all buttons
+	DepthMode chosenDepthMode = DepthMode::NONE;
+	for (size_t i = 0; i < this->depthModeNames.size(); ++i)
+	{
+		// Button was pressed, choose this mode
+		if (ImGui::Button(this->depthModeNames[i].c_str()))
+		{
+			chosenDepthMode = (DepthMode) i;
+			i = this->depthModeNames.size();
+		}
 	}
 
 	// End
@@ -52,17 +49,16 @@ void Engine::updateImgui()
 		{
 		case DepthMode::BSP_BACK_TO_FRONT:
 			this->bsp.setTraversalMode(BspTraversalMode::BACK_TO_FRONT);
-			this->renderer.setDepthStencil(false, false);
 
 			break;
+
 		case DepthMode::BSP_FRONT_TO_BACK:
 			this->bsp.setTraversalMode(BspTraversalMode::FRONT_TO_BACK);
-			this->renderer.setDepthStencil(false, false);
 
 			break;
+
 		case DepthMode::BSP_FRONT_TO_BACK_WITH_STENCIL:
 			this->bsp.setTraversalMode(BspTraversalMode::FRONT_TO_BACK);
-			this->renderer.setDepthStencil(false, true);
 
 			break;
 
@@ -71,6 +67,16 @@ void Engine::updateImgui()
 		}
 
 		this->currentDepthMode = chosenDepthMode;
+
+		// Apply settings
+		this->useBsp = 
+			this->currentDepthMode == DepthMode::BSP_BACK_TO_FRONT ||
+			this->currentDepthMode == DepthMode::BSP_FRONT_TO_BACK ||
+			this->currentDepthMode == DepthMode::BSP_FRONT_TO_BACK_WITH_STENCIL;
+		this->renderer.setDepthStencil(
+			this->currentDepthMode == DepthMode::ONLY_DEPTH_TESTING,
+			this->currentDepthMode == DepthMode::BSP_FRONT_TO_BACK_WITH_STENCIL
+		);
 	}
 
 	// Update settings
@@ -81,7 +87,9 @@ void Engine::updateImgui()
 }
 
 Engine::Engine()
-	: currentDepthMode(DepthMode::BSP_BACK_TO_FRONT), renderWireframe(false)
+	: currentDepthMode(DepthMode::BSP_BACK_TO_FRONT), 
+	renderWireframe(false),
+	useBsp(true)
 {
 	this->depthModeNames.push_back("BSP back-to-front traversal");
 	this->depthModeNames.push_back("BSP front-to-back traversal");
@@ -114,31 +122,6 @@ void Engine::init()
 	// BSP to render mesh with
 	this->bsp.createFromMeshData(meshData);
 
-	// Randomly create trees and choose the best one
-	/*BSP* bsp = nullptr;
-	BSP bsps[2]{};
-	uint32_t currentIndex = 0;
-	uint32_t lowestDepth = ~0u;
-	for (uint32_t i = 0; i < 40; ++i)
-	{
-		MeshData tempMeshData; 
-		tempMeshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
-		bsps[currentIndex].createFromMeshData(tempMeshData);
-
-		uint32_t treeDepth = bsps[currentIndex].getTreeDepth();
-		if (treeDepth < lowestDepth)
-		{
-			Log::write("Switched BSP");
-
-			lowestDepth = treeDepth;
-			bsp = &bsps[currentIndex];
-			meshData = tempMeshData;
-			currentIndex = (currentIndex + 1) % 2;
-		}
-	}
-	Log::write("Chosen tree depth: " + std::to_string(lowestDepth));*/
-
-
 	// Mesh to render
 	Mesh mesh(this->renderer);
 	mesh.createMesh(meshData, true);
@@ -151,17 +134,24 @@ void Engine::init()
 		this->window.update();
 		Time::updateDeltaTime();
 
-		// "Game logic"
-		camera.update();
-		this->bsp.traverseTree(meshData, camera.getPosition());
-		mesh.getIndexBuffer().updateIndexBuffer(
-			meshData.getIndices(), 
-			this->renderer.getCurrentFrameIndex()
-		);
-
-
 		this->updateImgui();
 
+		// ------------- "Game logic" -------------
+		camera.update();
+
+		if (this->useBsp)
+		{
+			// Traverse BSP tree
+			this->bsp.traverseTree(meshData, camera.getPosition());
+
+			// Update index buffer from the tree traversal
+			mesh.getIndexBuffer().updateIndexBuffer(
+				meshData.getIndices(),
+				this->renderer.getCurrentFrameIndex()
+			);
+		}
+		// ------------- End of "game logic" -------------
+		
 		// Render
 		// TODO: change to scene submission rather
 		// than mesh submission
