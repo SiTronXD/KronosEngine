@@ -380,8 +380,6 @@ void Renderer::setDepthStencil(bool useDepthTesting, bool useStencilTesting)
 	// "Bind/unbind" depth buffer to renderpass
 	if (isDepthBufferBound != bindDepthBuffer)
 	{
-		Log::write("Bind info: " + std::to_string(bindDepthBuffer));
-
 		this->renderPass.cleanup();
 		this->swapchain.cleanupFramebuffers();
 
