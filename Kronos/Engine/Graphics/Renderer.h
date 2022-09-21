@@ -105,7 +105,7 @@ public:
 	void startCleanup();
 	void cleanup();
 
-	void drawFrame(Camera& camera, Mesh& mesh);
+	void draw(Camera& camera, Mesh& mesh);
 
 	void setToWireframe(bool wireframe);
 	void setDepthStencil(bool useDepthTesting, bool useStencilTesting);

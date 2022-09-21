@@ -245,7 +245,7 @@ void Renderer::createSyncObjects()
 	}
 }
 
-void Renderer::drawFrame(Camera& camera, Mesh& mesh)
+void Renderer::draw(Camera& camera, Mesh& mesh)
 {
 	// Wait, then reset fence
 	vkWaitForFences(
@@ -363,7 +363,9 @@ void Renderer::setToWireframe(bool wireframe)
 	this->graphicsPipeline.createGraphicsPipeline(
 		this->graphicsPipelineLayout,
 		this->renderPass,
-		this->renderWireframe
+		this->renderWireframe,
+		this->useDepthTesting,
+		this->useStencilTesting
 	);
 }
 
@@ -387,6 +389,7 @@ void Renderer::setDepthStencil(bool useDepthTesting, bool useStencilTesting)
 		this->swapchain.createFramebuffers();
 	}
 
+	// Recreate pipeline for enabling/disabling depth/stencil testing
 	this->graphicsPipeline.cleanup();
 	this->graphicsPipeline.createGraphicsPipeline(
 		this->graphicsPipelineLayout,

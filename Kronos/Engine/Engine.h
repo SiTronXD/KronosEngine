@@ -22,6 +22,10 @@ private:
 
 	BSP bsp;
 
+	Mesh originalMesh;
+	Mesh bspMesh;
+	Mesh* currentMesh;
+
 	std::vector<std::string> depthModeNames;
 
 	DepthMode currentDepthMode;

@@ -77,6 +77,7 @@ void Engine::updateImgui()
 			this->currentDepthMode == DepthMode::ONLY_DEPTH_TESTING,
 			this->currentDepthMode == DepthMode::BSP_FRONT_TO_BACK_WITH_STENCIL
 		);
+		this->currentMesh = this->useBsp ? &this->bspMesh : &this->originalMesh;
 	}
 
 	// Update settings
@@ -87,14 +88,18 @@ void Engine::updateImgui()
 }
 
 Engine::Engine()
-	: currentDepthMode(DepthMode::BSP_BACK_TO_FRONT), 
+	: 
+	originalMesh(this->renderer),
+	bspMesh(this->renderer),
+	currentMesh(nullptr),
+	currentDepthMode(DepthMode::BSP_BACK_TO_FRONT), 
 	renderWireframe(false),
 	useBsp(true)
 {
 	this->depthModeNames.push_back("BSP back-to-front traversal");
 	this->depthModeNames.push_back("BSP front-to-back traversal");
 	this->depthModeNames.push_back("BSP front-to-back traversal using stencil buffer");
-	this->depthModeNames.push_back("Standard depth testing (with BSP-split mesh)");
+	this->depthModeNames.push_back("Standard depth testing (with original mesh)");
 	this->depthModeNames.push_back("Ignore depth");
 }
 
@@ -110,21 +115,25 @@ void Engine::init()
 	Camera camera(this->renderer);
 
 	// Mesh data to render
-	MeshData meshData;
-	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
-	//meshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
-	meshData.loadOBJ("Resources/Models/suzanne.obj");
-	//meshData.loadOBJ("Resources/Models/sphereTest.obj");
-	//meshData.loadOBJ("Resources/Models/lowResSphere.obj");
-	//meshData.loadOBJ("Resources/Models/lowResThreeSpheres.obj");
-	//meshData.loadOBJ("Resources/Models/torus.obj");
+	MeshData originalMeshData;
+	//originalMeshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
+	//originalMeshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
+	originalMeshData.loadOBJ("Resources/Models/suzanne.obj");
+	//originalMeshData.loadOBJ("Resources/Models/sphereTest.obj");
+	//originalMeshData.loadOBJ("Resources/Models/lowResSphere.obj");
+	//originalMeshData.loadOBJ("Resources/Models/lowResThreeSpheres.obj");
+	//originalMeshData.loadOBJ("Resources/Models/torus.obj");
+
+	// Make a copy of the mesh data when BSP splitting
+	MeshData bspMeshData(originalMeshData);
 
 	// BSP to render mesh with
-	this->bsp.createFromMeshData(meshData);
+	this->bsp.createFromMeshData(bspMeshData);
 
 	// Mesh to render
-	Mesh mesh(this->renderer);
-	mesh.createMesh(meshData, true);
+	this->originalMesh.createMesh(originalMeshData, false);
+	this->bspMesh.createMesh(bspMeshData, true);
+	this->currentMesh = &bspMesh;
 
 	// Main loop
 	Time::init();
@@ -142,20 +151,20 @@ void Engine::init()
 		if (this->useBsp)
 		{
 			// Traverse BSP tree
-			this->bsp.traverseTree(meshData, camera.getPosition());
+			this->bsp.traverseTree(bspMeshData, camera.getPosition());
 
 			// Update index buffer from the tree traversal
-			mesh.getIndexBuffer().updateIndexBuffer(
-				meshData.getIndices(),
+			this->bspMesh.getIndexBuffer().updateIndexBuffer(
+				bspMeshData.getIndices(),
 				this->renderer.getCurrentFrameIndex()
 			);
 		}
 		// ------------- End of "game logic" -------------
 		
 		// Render
-		// TODO: change to scene submission rather
+		// This should be changed to scene submission rather
 		// than mesh submission
-		this->renderer.drawFrame(camera, mesh);
+		this->renderer.draw(camera, *this->currentMesh);
 
 		// Print fps
 		if (Time::hasOneSecondPassed())
@@ -165,7 +174,8 @@ void Engine::init()
 	// Cleanup
 	this->renderer.startCleanup();
 
-	mesh.cleanup();
+	this->originalMesh.cleanup();
+	this->bspMesh.cleanup();
 
 	this->renderer.cleanup();
 }
