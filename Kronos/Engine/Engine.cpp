@@ -116,13 +116,17 @@ void Engine::init()
 
 	// Mesh data to render
 	MeshData originalMeshData;
-	//originalMeshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
-	//originalMeshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
+
+	// Running in debug is fast enough for these models
 	originalMeshData.loadOBJ("Resources/Models/suzanne.obj");
 	//originalMeshData.loadOBJ("Resources/Models/sphereTest.obj");
 	//originalMeshData.loadOBJ("Resources/Models/lowResSphere.obj");
 	//originalMeshData.loadOBJ("Resources/Models/lowResThreeSpheres.obj");
 	//originalMeshData.loadOBJ("Resources/Models/torus.obj");
+
+	// Run in release for these models, since BSP building can take over 70 seconds
+	//originalMeshData.loadOBJ("Resources/Models/dragon_vrip_res4.obj");
+	//originalMeshData.loadOBJ("Resources/Models/dragon_vrip_res4_big.obj");
 
 	// Make a copy of the mesh data when BSP splitting
 	MeshData bspMeshData(originalMeshData);
