@@ -6,13 +6,28 @@
 
 Pipeline::Pipeline(Renderer& renderer)
 	: renderer(renderer),
-	pipeline(VK_NULL_HANDLE)
+	pipeline(VK_NULL_HANDLE),
+	pipelineCache(VK_NULL_HANDLE)
 {
 }
 
 Pipeline::~Pipeline()
 {
 
+}
+
+void Pipeline::createPipelineCache()
+{
+	VkPipelineCacheCreateInfo pipelineCacheCreateInfo{};
+	pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+	if (vkCreatePipelineCache(
+		this->renderer.getVkDevice(), 
+		&pipelineCacheCreateInfo, 
+		nullptr,
+		&this->pipelineCache) != VK_SUCCESS)
+	{
+		Log::error("Could not create pipeline cache.");
+	}
 }
 
 void Pipeline::createGraphicsPipeline(
@@ -160,7 +175,7 @@ void Pipeline::createGraphicsPipeline(
 	pipelineInfo.basePipelineIndex = -1;
 	if (vkCreateGraphicsPipelines(
 		this->renderer.getVkDevice(),
-		VK_NULL_HANDLE,
+		this->pipelineCache,
 		1,
 		&pipelineInfo,
 		nullptr,
@@ -177,4 +192,9 @@ void Pipeline::createGraphicsPipeline(
 void Pipeline::cleanup()
 {
 	vkDestroyPipeline(this->renderer.getVkDevice(), this->pipeline, nullptr);
+}
+
+void Pipeline::cleanupPipelineCache()
+{
+	vkDestroyPipelineCache(this->renderer.getVkDevice(), this->pipelineCache, nullptr);
 }

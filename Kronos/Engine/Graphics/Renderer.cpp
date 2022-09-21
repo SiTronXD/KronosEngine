@@ -59,6 +59,7 @@ void Renderer::initVulkan()
 	this->renderPass.createRenderPass();
 	this->descriptorSetLayout.createDescriptorSetLayout();
 	this->graphicsPipelineLayout.createPipelineLayout(this->descriptorSetLayout);
+	this->graphicsPipeline.createPipelineCache();
 	this->graphicsPipeline.createGraphicsPipeline(
 		this->graphicsPipelineLayout,
 		this->renderPass,
@@ -176,6 +177,7 @@ void Renderer::cleanup()
 	this->singleTimeCommandPool.cleanup();
 	this->commandPool.cleanup();
 	this->graphicsPipeline.cleanup();
+	this->graphicsPipeline.cleanupPipelineCache();
 	this->graphicsPipelineLayout.cleanup();
 	this->descriptorSetLayout.cleanup();
 	this->renderPass.cleanup();
