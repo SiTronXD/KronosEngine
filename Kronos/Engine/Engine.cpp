@@ -141,6 +141,8 @@ void Engine::init()
 
 	// Main loop
 	Time::init();
+	float lastFrameAvgTime = 1.0f;
+	uint32_t currentFrame = 0;
 	while (this->window.isRunning())
 	{
 		// Update before "game logic"
@@ -173,6 +175,20 @@ void Engine::init()
 		// Print fps
 		if (Time::hasOneSecondPassed())
 			Log::write("FPS: " + std::to_string(1.0f / Time::getDT()));
+
+		// Measure average time across 100 000 frames
+		/*if (Input::isKeyPressed(Keys::R))
+		{
+			lastFrameAvgTime = 1.0f;
+			currentFrame = 0;
+		}
+		if (currentFrame < 100000)
+		{
+			float t = 1.0f / (currentFrame + 1);
+			lastFrameAvgTime = ((1.0f - t) * lastFrameAvgTime) + t * (Time::getDT());
+			currentFrame++;
+			Log::write("ms: " + std::to_string(lastFrameAvgTime * 1000.0f));
+		}*/
 	}
 
 	// Cleanup
