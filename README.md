@@ -8,7 +8,7 @@
 # BSP tree features
 * Builds a BSP tree and splits the mesh until all leaves contains convex submeshes
 * Numerically robust BSP building using concepts from the book "Real-Time Collision Detection" by Christer Ericson. The concepts used are tolerance comparisons, thick planes and sharing split edges.
-* Heuristics for determining plane splits to decrease tree depth. Not perfect, but far better than random choices.
+* Heuristics for determining which triangle to create a splitting plane from, to avoid unnecessarily increasing the tree depth. Not perfect, but far better than random choices.
 * BSP tree traversal on the CPU, which reorders the mesh's index buffer elements to render triangles in the desired order
 
 ![github-small](Kronos/Resources/Textures/Screenshots3.png)
