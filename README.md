@@ -43,5 +43,6 @@ Statistics about the depth modes in runtime are shown here. The delta times were
 * Vulkan is set to automatically perform gamma correction with respect to the swapchain images and loaded textures
 * Index buffers can be either dynamically written from the CPU (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) or be static on the GPU (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 * Frames in flight that are separated from the swapchain images
+* Different command pools depending on the lifespan of the command buffers used
 
 ![github-small](Kronos/Resources/Textures/Screenshots2.png)
