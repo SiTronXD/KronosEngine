@@ -507,8 +507,8 @@ void Renderer::recordCommandBuffer(
 		// Record beginning render pass
 		commandBuffer.beginRenderPass(renderPassInfoImgui);
 
-		// Record imgui primitives into it's command buffer
-		ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer.getVkCommandBuffer());
+			// Record imgui primitives into it's command buffer
+			ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer.getVkCommandBuffer());
 
 		// End render pass
 		commandBuffer.endRenderPass();
